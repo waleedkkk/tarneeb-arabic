@@ -1,4 +1,4 @@
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { PlayingCard, CardBack } from "./card";
 import { cardLabel, legalCards, suitName, suitSymbol } from "@/lib/tarneeb/engine";
 import type { MatchState } from "@/lib/tarneeb/types";
@@ -6,10 +6,14 @@ import { useEffect } from "react";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 export function GameTable({ state, onCardPress }: { state: MatchState; onCardPress: (cardId: string) => void }) {
+  const { width } = useWindowDimensions();
   const humanTurn = state.phase === "playing" && (state.trick.plays.length === 0 ? state.trick.leaderId === 0 : (state.trick.plays.at(-1)?.playerId ?? 3) === 3);
   const playable = humanTurn ? legalCards(state.players[0].hand, state.trick).map((card) => card.id) : [];
   const cardBySeat = Object.fromEntries(state.trick.plays.map((play) => [play.playerId, play.card]));
   const trump = state.bidding.trumpSuit;
+  const hand = state.players[0].hand;
+  const fanWidth = Math.min(Math.max(width - 30, 270), 340);
+  const fanSpacing = hand.length > 1 ? (fanWidth - 60) / (hand.length - 1) : 0;
 
   return (
     <View style={styles.screen}>
@@ -34,15 +38,10 @@ export function GameTable({ state, onCardPress }: { state: MatchState; onCardPre
       </View>
 
       <View style={styles.handArea}>
-        <View style={styles.handHeader}><Text style={styles.handTitle}>أوراقك</Text><Text style={styles.handHint}>{humanTurn ? "اختر ورقة متاحة" : "دور الخصم"}</Text></View>
-        <FlatList
-          horizontal
-          data={state.players[0].hand}
-          keyExtractor={(card) => card.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.handList}
-          renderItem={({ item, index }) => <PlayingCard card={item} entranceDelay={index * 26} disabled={!humanTurn || !playable.includes(item.id)} onPress={() => onCardPress(item.id)} />}
-        />
+        <View style={styles.handHeader}><Text style={styles.handTitle}>أوراقك</Text><Text style={styles.handHint}>{humanTurn ? "اضغط على ورقة متاحة" : "دور الخصم"}</Text></View>
+        <View style={[styles.fanHand, { width: fanWidth }]} accessibilityLabel="يدك مرتبة كمروحة أوراق">
+          {hand.map((card, index) => <View key={card.id} style={[styles.fanCardSlot, fanCardStyle(index, hand.length, fanSpacing)]}><PlayingCard card={card} entranceDelay={index * 26} disabled={!humanTurn || !playable.includes(card.id)} onPress={() => onCardPress(card.id)} /></View>)}
+        </View>
       </View>
     </View>
   );
@@ -51,6 +50,17 @@ export function GameTable({ state, onCardPress }: { state: MatchState; onCardPre
 function currentSeat(state: MatchState) {
   if (state.phase !== "playing") return null;
   return state.trick.plays.length === 0 ? state.trick.leaderId : ((state.trick.plays.at(-1)!.playerId + 1) % 4);
+}
+
+function fanCardStyle(index: number, total: number, spacing: number) {
+  const center = (total - 1) / 2;
+  const offset = index - center;
+  return {
+    left: index * spacing,
+    bottom: Math.max(0, 12 - Math.abs(offset) * 2.2),
+    zIndex: total - Math.round(Math.abs(offset)),
+    transform: [{ rotate: `${offset * 2.2}deg` }],
+  };
 }
 
 function PlayerSeat({ name, cards, position, active }: { name: string; cards: number; position: "top" | "left" | "right"; active: boolean }) {
@@ -116,11 +126,12 @@ const styles = StyleSheet.create({
   playLeft: { left: 8, top: 68 },
   playRight: { right: 8, top: 68 },
   tableHint: { alignSelf: "center", marginTop: 92, color: "#D9EEE4", fontSize: 13, writingDirection: "rtl" },
-  handArea: { marginTop: 10, paddingBottom: 8 },
+  handArea: { height: 140, marginTop: 10, paddingBottom: 8, alignItems: "center" },
   handHeader: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 4, marginBottom: 6 },
   handTitle: { color: "#FFF8E7", fontSize: 16, fontWeight: "800", writingDirection: "rtl" },
   handHint: { color: "#B4D6C7", fontSize: 12, writingDirection: "rtl" },
-  handList: { paddingHorizontal: 4, paddingBottom: 4 },
+  fanHand: { height: 112, position: "relative", alignSelf: "center" },
+  fanCardSlot: { position: "absolute", bottom: 0 },
   lastTrick: { margin: 12, backgroundColor: "#FFF8E7", borderRadius: 18, padding: 14, alignItems: "center" },
   lastTrickTitle: { color: "#0E3B2E", fontSize: 16, fontWeight: "900", writingDirection: "rtl" },
   lastTrickDetail: { color: "#52635C", fontSize: 13, marginTop: 3, writingDirection: "rtl" },
