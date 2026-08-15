@@ -1,7 +1,8 @@
 import { CameraView, type BarcodeScanningResult, useCameraPermissions } from "expo-camera";
 import QRCode from "react-native-qrcode-svg";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 import { useLocalRoom } from "@/lib/tarneeb/local-room-context";
 import { LOCAL_ROOM_JOIN_TIMEOUT_MS, roomConnectionCountdownCopy, validateRoomQrData } from "@/lib/tarneeb/local-room-utils";
@@ -20,6 +21,9 @@ export function LocalRoomSheet({ visible, onClose }: { visible: boolean; onClose
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joinErrorAction, setJoinErrorAction] = useState<JoinErrorAction>(null);
   const [joinMillisecondsRemaining, setJoinMillisecondsRemaining] = useState(LOCAL_ROOM_JOIN_TIMEOUT_MS);
+  const [showJoinSuccess, setShowJoinSuccess] = useState(false);
+  const previousRoomStatus = useRef(room.status);
+  const joinSuccessTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -27,6 +31,22 @@ export function LocalRoomSheet({ visible, onClose }: { visible: boolean; onClose
       setMode(room.role === "host" ? "host" : "join");
     }
   }, [room.role, room.status, visible]);
+
+  useEffect(() => {
+    const joinedNow = visible && room.role === "client" && room.status === "ready" && previousRoomStatus.current === "joining";
+    previousRoomStatus.current = room.status;
+    if (!joinedNow) return;
+    if (joinSuccessTimer.current) clearTimeout(joinSuccessTimer.current);
+    setShowJoinSuccess(true);
+    joinSuccessTimer.current = setTimeout(() => {
+      setShowJoinSuccess(false);
+      joinSuccessTimer.current = null;
+    }, 1600);
+  }, [room.role, room.status, visible]);
+
+  useEffect(() => () => {
+    if (joinSuccessTimer.current) clearTimeout(joinSuccessTimer.current);
+  }, []);
 
   useEffect(() => {
     if (mode !== "join") return;
@@ -135,6 +155,7 @@ export function LocalRoomSheet({ visible, onClose }: { visible: boolean; onClose
         {mode === "host" && <HostLobby onStart={room.startRoomMatch} onLeave={() => void closeOrLeave()} />}
         {mode === "join" && <JoinForm name={name} roomCode={roomCode} onNameChange={setName} onRoomCodeChange={(value) => { setRoomCode(value); setFlowError(null); }} onBack={() => { setFlowError(null); setMode("menu"); }} onScan={() => void scan()} onJoin={() => void join()} onCancel={() => void room.leaveRoom()} busy={room.status === "joining"} millisecondsRemaining={joinMillisecondsRemaining} requestingCamera={requestingCamera} permissionGranted={Boolean(permission?.granted)} error={visibleJoinError} errorActionLabel={retryErrorLabel} onErrorAction={retryErrorAction} />}
         {mode === "scanner" && <Scanner onBack={() => setMode("join")} onScanned={onBarcodeScanned} />}
+        <JoinSuccessToast visible={showJoinSuccess} />
       </View>
     </Modal>
   );
@@ -173,6 +194,7 @@ function Scanner({ onBack, onScanned }: { onBack: () => void; onScanned: (result
 function ErrorCard({ message, actionLabel, onAction }: { message: string; actionLabel?: string; onAction?: () => void }) { return <View style={styles.error}><Text style={styles.errorTitle}>تعذر المتابعة</Text><Text style={styles.errorText}>{message}</Text>{actionLabel && onAction ? <Pressable onPress={onAction} style={({ pressed }) => [styles.errorAction, pressed && styles.pressed]}><Text style={styles.errorActionText}>{actionLabel}</Text></Pressable> : null}</View>; }
 function LoadingCard({ title, text }: { title: string; text: string }) { return <View style={styles.loadingCard}><ActivityIndicator color="#E3B341" /><View style={styles.loadingCopy}><Text style={styles.loadingTitle}>{title}</Text><Text style={styles.loadingText}>{text}</Text></View></View>; }
 function ConnectionCountdown({ millisecondsRemaining, onCancel }: { millisecondsRemaining: number; onCancel: () => void }) { const seconds = Math.max(0, Math.ceil(millisecondsRemaining / 1000)); return <View style={styles.countdownCard}><View style={styles.countdownBadge}><Text style={styles.countdownValue}>{seconds}</Text><Text style={styles.countdownUnit}>ث</Text></View><View style={styles.countdownCopy}><Text style={styles.countdownTitle}>جارٍ الاتصال بالغرفة</Text><Text style={styles.countdownText}>{roomConnectionCountdownCopy(millisecondsRemaining)}</Text></View><Pressable accessibilityLabel="إلغاء محاولة الاتصال" onPress={onCancel} style={({ pressed }) => [styles.cancelJoin, pressed && styles.pressed]}><Text style={styles.cancelJoinText}>إلغاء</Text></Pressable></View>; }
+function JoinSuccessToast({ visible }: { visible: boolean }) { const progress = useSharedValue(0); useEffect(() => { progress.value = withTiming(visible ? 1 : 0, { duration: visible ? 240 : 160, easing: Easing.out(Easing.cubic) }); }, [progress, visible]); const animatedStyle = useAnimatedStyle(() => ({ opacity: progress.value, transform: [{ translateY: (1 - progress.value) * -16 }, { scale: 0.96 + progress.value * 0.04 }] })); return <Animated.View pointerEvents="none" accessibilityRole="alert" accessibilityLiveRegion="polite" style={[styles.joinSuccessToast, animatedStyle]}><View style={styles.joinSuccessIcon}><Text style={styles.joinSuccessCheck}>✓</Text></View><View style={styles.joinSuccessCopy}><Text style={styles.joinSuccessTitle}>تم الانضمام بنجاح</Text><Text style={styles.joinSuccessText}>أنت الآن في الغرفة، بانتظار المضيف لبدء المباراة.</Text></View></Animated.View>; }
 function NativeBuildNotice() { return <View style={styles.warning}><Text style={styles.warningTitle}>يلزم بناء أصلي</Text><Text style={styles.warningText}>الاتصال بين الهواتف يعمل في نسخة Android أو iPhone المبنية، وليس داخل معاينة الويب.</Text></View>; }
 function StepTitle({ title, text }: { title: string; text: string }) { return <View style={styles.stepTitle}><Text style={styles.stepTitleText}>{title}</Text><Text style={styles.stepText}>{text}</Text></View>; }
 function Label({ text }: { text: string }) { return <Text style={styles.label}>{text}</Text>; }
@@ -208,5 +230,6 @@ const styles = StyleSheet.create({
   loadingCard: { minHeight: 66, borderRadius: 16, backgroundColor: "rgba(227,179,65,0.12)", padding: 13, flexDirection: "row-reverse", alignItems: "center", gap: 12, borderWidth: 1, borderColor: "rgba(227,179,65,0.26)" }, loadingCopy: { flex: 1, alignItems: "flex-end" }, loadingTitle: { color: "#F5D889", fontWeight: "900", writingDirection: "rtl" }, loadingText: { color: "#D9EEE4", fontSize: 12, marginTop: 3, writingDirection: "rtl", textAlign: "right" },
   scannerPage: { flex: 1, overflow: "hidden" }, camera: { flex: 1 }, scannerShade: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.34)", alignItems: "center", justifyContent: "center", padding: 28 }, scannerTitle: { position: "absolute", top: 52, color: "#FFF8E7", fontWeight: "900", fontSize: 18, writingDirection: "rtl" }, scannerHint: { position: "absolute", top: 82, color: "#D9EEE4", fontSize: 12, textAlign: "center", lineHeight: 18, writingDirection: "rtl", maxWidth: 280 }, scanBox: { width: 235, height: 235, borderRadius: 28, borderWidth: 3, borderColor: "#E3B341", alignItems: "center", justifyContent: "center" }, scannerLoading: { backgroundColor: "rgba(14,59,46,0.82)", paddingVertical: 12, paddingHorizontal: 18, borderRadius: 14, alignItems: "center", gap: 7 }, scannerLoadingText: { color: "#FFF8E7", fontWeight: "800", fontSize: 12, writingDirection: "rtl" }, scannerBack: { position: "absolute", bottom: 44, backgroundColor: "#FFF8E7", paddingHorizontal: 30, paddingVertical: 13, borderRadius: 18 }, scannerBackText: { color: "#0E3B2E", fontWeight: "900", writingDirection: "rtl" },
   countdownCard: { minHeight: 82, borderRadius: 18, backgroundColor: "rgba(227,179,65,0.14)", padding: 12, flexDirection: "row-reverse", alignItems: "center", gap: 11, borderWidth: 1, borderColor: "rgba(227,179,65,0.4)" }, countdownBadge: { width: 50, height: 50, borderRadius: 25, backgroundColor: "#E3B341", alignItems: "center", justifyContent: "center", flexDirection: "row" }, countdownValue: { color: "#173C2F", fontSize: 22, fontWeight: "900" }, countdownUnit: { color: "#315241", fontSize: 11, marginTop: 8, marginLeft: 2, fontWeight: "900" }, countdownCopy: { flex: 1, alignItems: "flex-end" }, countdownTitle: { color: "#F5D889", fontWeight: "900", writingDirection: "rtl" }, countdownText: { color: "#D9EEE4", marginTop: 3, fontSize: 12, writingDirection: "rtl", textAlign: "right" }, cancelJoin: { borderRadius: 11, paddingHorizontal: 10, paddingVertical: 9, backgroundColor: "rgba(255,248,231,0.13)" }, cancelJoinText: { color: "#FFF8E7", fontWeight: "900", fontSize: 12, writingDirection: "rtl" },
+  joinSuccessToast: { position: "absolute", top: 96, left: 18, right: 18, zIndex: 20, elevation: 20, borderRadius: 20, padding: 14, backgroundColor: "#FFF8E7", flexDirection: "row-reverse", alignItems: "center", gap: 11, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 14, shadowOffset: { width: 0, height: 7 } }, joinSuccessIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#1E8F61", alignItems: "center", justifyContent: "center" }, joinSuccessCheck: { color: "#FFF8E7", fontSize: 23, fontWeight: "900", lineHeight: 27 }, joinSuccessCopy: { flex: 1, alignItems: "flex-end" }, joinSuccessTitle: { color: "#0E3B2E", fontSize: 16, fontWeight: "900", writingDirection: "rtl" }, joinSuccessText: { color: "#52635C", marginTop: 2, fontSize: 12, lineHeight: 18, textAlign: "right", writingDirection: "rtl" },
   pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
 });
