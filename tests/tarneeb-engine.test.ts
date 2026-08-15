@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardBeats, createHomeState, createRound, legalCards, resolveTrick, submitBid } from "../lib/tarneeb/engine";
+import { cardBeats, createHomeState, createRound, legalCards, resolveTrick, submitBid, suitStrength } from "../lib/tarneeb/engine";
 import type { Card, Trick } from "../lib/tarneeb/types";
 
 const card = (suit: Card["suit"], rank: Card["rank"]): Card => ({ id: `${suit}-${rank}`, suit, rank });
@@ -28,5 +28,14 @@ describe("محرك طرنيب", () => {
     expect(next.bidding.highestBid).toBe(8);
     expect(next.bidding.highestBidder).toBe(0);
     expect(next.bidding.currentPlayer).toBe(1);
+  });
+
+  it("يقيم النوع الطويل ذي الأوراق العالية باعتباره أقوى للطرنيب", () => {
+    const hand = [card("spades", 14), card("spades", 13), card("spades", 12), card("spades", 11), card("spades", 8), card("spades", 3), card("hearts", 14), card("hearts", 2)];
+    const spades = suitStrength(hand, "spades");
+    const hearts = suitStrength(hand, "hearts");
+    expect(spades.score).toBeGreaterThan(hearts.score);
+    expect(spades.label).toBe("قوي");
+    expect(spades.bars).toBeGreaterThan(hearts.bars);
   });
 });

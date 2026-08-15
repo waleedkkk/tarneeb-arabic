@@ -16,6 +16,7 @@ import { SUITS } from "./types";
 const RANKS: Rank[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
 const SEATS: Seat[] = [0, 1, 2, 3];
 const SUIT_ORDER: Record<Suit, number> = { clubs: 0, diamonds: 1, hearts: 2, spades: 3 };
+const HIGH_CARD_WEIGHTS: Partial<Record<Rank, number>> = { 10: 1, 11: 2, 12: 3, 13: 4, 14: 5 };
 
 export const DEFAULT_SETTINGS: GameSettings = {
   targetScore: 31,
@@ -50,6 +51,17 @@ export function cardLabel(card: Card): string {
 
 export function sortHand(hand: Card[]): Card[] {
   return [...hand].sort((a, b) => SUIT_ORDER[a.suit] - SUIT_ORDER[b.suit] || b.rank - a.rank);
+}
+
+export function suitStrength(hand: Card[], suit: Suit) {
+  const cards = hand.filter((card) => card.suit === suit);
+  const highCards = cards.filter((card) => card.rank >= 10);
+  const highCardScore = highCards.reduce((total, card) => total + (HIGH_CARD_WEIGHTS[card.rank] ?? 0), 0);
+  const lengthBonus = cards.length >= 7 ? 4 : cards.length >= 5 ? 2 : 0;
+  const score = cards.length * 2 + highCardScore + lengthBonus;
+  const bars = cards.length === 0 ? 0 : Math.min(5, Math.max(1, Math.ceil(score / 5)));
+  const label = score >= 18 ? "قوي" : score >= 10 ? "متوسط" : "محدود";
+  return { suit, count: cards.length, highCount: highCards.length, score, bars, label };
 }
 
 export function createDeck(): Card[] {
