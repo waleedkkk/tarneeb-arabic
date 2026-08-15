@@ -55,11 +55,11 @@ export function getFanEdgeHitSlop(index: number, total: number, compact: boolean
 }
 
 /**
- * Returns an RTL hand slope: the physical right side of the hand is higher,
- * then the cards descend smoothly toward the left. Later cards sit above the
- * preceding cards so the exposed right-hand edges remain easy to select.
+ * Returns a balanced fan: both sides begin at the same baseline, while the
+ * center rises gently to form an even arc. Cards retain symmetric rotation
+ * and left-to-right stacking so their exposed edges stay easy to select.
  */
-export function getRtlSlopeFanCardPosition(
+export function getBalancedFanCardPosition(
   index: number,
   total: number,
   fanWidth: number,
@@ -68,17 +68,19 @@ export function getRtlSlopeFanCardPosition(
 ): FanCardPosition {
   const cardCount = Math.max(total, 1);
   const safeIndex = Math.min(Math.max(index, 0), cardCount - 1);
-  const rightwardProgress = cardCount === 1 ? 0.5 : safeIndex / (cardCount - 1);
+  const progress = cardCount === 1 ? 0.5 : safeIndex / (cardCount - 1);
   const usableWidth = Math.max(fanWidth - cardFootprint, 0);
   const left = cardCount === 1 ? usableWidth / 2 : (safeIndex / (cardCount - 1)) * usableWidth;
   const baseline = compact ? 2 : 4;
-  const slopeLift = compact ? 13 : 18;
+  const curveLift = compact ? 11 : 16;
   const maxRotation = compact ? 7 : 10;
+  const centeredProgress = progress - 0.5;
+  const curve = 1 - Math.abs(centeredProgress * 2);
 
   return {
     left,
-    bottom: baseline + rightwardProgress * slopeLift,
-    rotation: (rightwardProgress - 0.5) * maxRotation,
+    bottom: baseline + curve * curveLift,
+    rotation: centeredProgress * maxRotation,
     zIndex: 10 + safeIndex,
   };
 }

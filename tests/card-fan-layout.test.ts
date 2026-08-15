@@ -1,23 +1,23 @@
 import { describe, expect, it } from "vitest";
 
-import { getFanEdgeHitSlop, getResponsiveFanMetrics, getRtlSlopeFanCardPosition } from "../lib/tarneeb/card-fan-layout";
+import { getBalancedFanCardPosition, getFanEdgeHitSlop, getResponsiveFanMetrics } from "../lib/tarneeb/card-fan-layout";
 
-describe("RTL sloped card hand layout", () => {
-  it("keeps the center card upright within the descending hand", () => {
-    const center = getRtlSlopeFanCardPosition(3, 7, 340);
-    const left = getRtlSlopeFanCardPosition(0, 7, 340);
-    const right = getRtlSlopeFanCardPosition(6, 7, 340);
+describe("balanced card hand layout", () => {
+  it("keeps the center card upright at the top of an even arc", () => {
+    const center = getBalancedFanCardPosition(3, 7, 340);
+    const left = getBalancedFanCardPosition(0, 7, 340);
+    const right = getBalancedFanCardPosition(6, 7, 340);
 
     expect(center.rotation).toBe(0);
     expect(center.bottom).toBeGreaterThan(left.bottom);
-    expect(right.bottom).toBeGreaterThan(center.bottom);
+    expect(left.bottom).toBe(right.bottom);
   });
 
-  it("raises and layers the physical right side above the left side", () => {
-    const left = getRtlSlopeFanCardPosition(0, 13, 340);
-    const right = getRtlSlopeFanCardPosition(12, 13, 340);
+  it("mirrors the sides while preserving the overlap order", () => {
+    const left = getBalancedFanCardPosition(0, 13, 340);
+    const right = getBalancedFanCardPosition(12, 13, 340);
 
-    expect(right.bottom).toBeGreaterThan(left.bottom);
+    expect(left.bottom).toBe(right.bottom);
     expect(left.rotation).toBe(-right.rotation);
     expect(right.zIndex).toBeGreaterThan(left.zIndex);
     expect(left.left + right.left).toBe(276);
@@ -25,19 +25,21 @@ describe("RTL sloped card hand layout", () => {
 
   it("uses compact cards and remains within a narrow 320px phone viewport", () => {
     const metrics = getResponsiveFanMetrics(320);
-    const finalCard = getRtlSlopeFanCardPosition(12, 13, metrics.fanWidth, metrics.cardFootprint, metrics.compact);
+    const finalCard = getBalancedFanCardPosition(12, 13, metrics.fanWidth, metrics.cardFootprint, metrics.compact);
 
     expect(metrics.compact).toBe(true);
     expect(metrics.fanWidth).toBeLessThanOrEqual(320);
     expect(finalCard.left + metrics.cardFootprint).toBe(metrics.fanWidth);
   });
 
-  it("keeps the compact hand sloped toward the physical right on a narrow display", () => {
+  it("keeps the compact hand balanced on a narrow display", () => {
     const metrics = getResponsiveFanMetrics(300);
-    const left = getRtlSlopeFanCardPosition(0, 13, metrics.fanWidth, metrics.cardFootprint, metrics.compact);
-    const right = getRtlSlopeFanCardPosition(12, 13, metrics.fanWidth, metrics.cardFootprint, metrics.compact);
+    const left = getBalancedFanCardPosition(0, 13, metrics.fanWidth, metrics.cardFootprint, metrics.compact);
+    const center = getBalancedFanCardPosition(6, 13, metrics.fanWidth, metrics.cardFootprint, metrics.compact);
+    const right = getBalancedFanCardPosition(12, 13, metrics.fanWidth, metrics.cardFootprint, metrics.compact);
 
-    expect(right.bottom).toBeGreaterThan(left.bottom);
+    expect(center.bottom).toBeGreaterThan(left.bottom);
+    expect(left.bottom).toBe(right.bottom);
     expect(left.rotation).toBe(-right.rotation);
   });
 
