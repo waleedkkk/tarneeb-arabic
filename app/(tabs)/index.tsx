@@ -82,10 +82,10 @@ function Bidding() {
             renderItem={({ item, index }) => <PlayingCard card={item} entranceDelay={index * 22} />}
           />
         </View>
-        <View style={styles.strengthPanel} accessibilityLabel="مؤشر قوة أنواع أوراقك">
+        {game.settings.showStrengthIndicator && <View style={styles.strengthPanel} accessibilityLabel="مؤشر قوة أنواع أوراقك">
           <View style={styles.strengthHeader}><View><View style={styles.strengthTitleRow}><Text style={styles.strengthTitle}>قوة الأنواع</Text><StrengthInfoButton /></View><Text style={styles.strengthDescription}>تُحسب من عدد الأوراق وA وK وQ وJ و10</Text></View><Text style={styles.strengthSuggestion}>الأقوى: {suitName(strongest.suit)}</Text></View>
           <View style={styles.strengthGrid}>{strengths.map((strength) => <SuitStrengthCard key={strength.suit} {...strength} />)}</View>
-        </View>
+        </View>}
         <Text style={styles.sectionTitle}>{isHumanTurn ? "اختر عرضك" : "يفكر الخصوم في المزايدة…"}</Text>
         <Text style={styles.sectionText}>{isHumanTurn ? `يمكنك طلب ${minBid} أو أكثر.` : "ستظهر نتيجتهم بعد لحظات."}</Text>
         <View style={styles.bidGrid}>{Array.from({ length: 13 - minBid + 1 }, (_, index) => minBid + index).map((bid) => <NumberButton key={bid} label={String(bid)} disabled={!isHumanTurn} onPress={() => game.submitHumanBid(bid)} />)}</View>
@@ -106,7 +106,7 @@ function TrumpSelection() {
         <Text style={styles.kicker}>الطلب {state.bidding.highestBid}</Text>
         <Text style={styles.pageTitle}>{humanIsBidder ? "اختر الطرنيب" : "يختار الخصم الطرنيب"}</Text>
         <Text style={styles.pageSubtitle}>{humanIsBidder ? "حدد النوع الذي يمنح فريقك أفضل فرصة للفوز باللمم." : `${state.players[state.bidding.highestBidder!].name} يراجع أوراقه…`}</Text>
-        {humanIsBidder && <View style={styles.trumpStrengthPanel}><View style={styles.strengthTitleRow}><Text style={styles.trumpStrengthTitle}>مؤشر قوة أوراقك</Text><StrengthInfoButton /></View><View style={styles.strengthGrid}>{strengths.map((strength) => <SuitStrengthCard key={strength.suit} {...strength} />)}</View></View>}
+        {humanIsBidder && game.settings.showStrengthIndicator && <View style={styles.trumpStrengthPanel}><View style={styles.strengthTitleRow}><Text style={styles.trumpStrengthTitle}>مؤشر قوة أوراقك</Text><StrengthInfoButton /></View><View style={styles.strengthGrid}>{strengths.map((strength) => <SuitStrengthCard key={strength.suit} {...strength} />)}</View></View>}
         <View style={styles.suitGrid}>{SUITS.map((suit) => <Pressable key={suit} disabled={!humanIsBidder} onPress={() => game.selectHumanTrump(suit)} style={({ pressed }) => [styles.suitButton, pressed && humanIsBidder && styles.buttonPressed, !humanIsBidder && styles.buttonDisabled]}><Text style={[styles.suitSymbol, (suit === "hearts" || suit === "diamonds") && styles.suitRed]}>{suitSymbol(suit)}</Text><Text style={styles.suitName}>{suitName(suit)}</Text></Pressable>)}</View>
       </ScrollView>
     </SafeAreaView>

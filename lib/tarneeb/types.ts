@@ -57,6 +57,7 @@ export interface GameSettings {
   aiLevel: "هادئ" | "متوازن" | "جريء";
   hapticsEnabled: boolean;
   soundEnabled: boolean;
+  showStrengthIndicator: boolean;
 }
 
 export interface MatchState {

@@ -11,6 +11,7 @@ export default function SettingsScreen() {
         <Section title="هدف المباراة"><View style={styles.choiceRow}>{([31, 41, 61] as const).map((score) => <Choice key={score} label={`${score} نقطة`} active={settings.targetScore === score} onPress={() => updateSettings({ targetScore: score })} />)}</View></Section>
         <Section title="أسلوب الخصوم"><View style={styles.choiceRow}>{(["هادئ", "متوازن", "جريء"] as const).map((level) => <Choice key={level} label={level} active={settings.aiLevel === level} onPress={() => updateSettings({ aiLevel: level })} />)}</View></Section>
         <Section title="التغذية الراجعة"><ToggleRow label="الاهتزاز للمسات المهمة" description="عند بدء الجولة ولعب الورق والنتائج." value={settings.hapticsEnabled} onChange={(hapticsEnabled) => updateSettings({ hapticsEnabled })} /><ToggleRow label="المؤثرات الصوتية" description="أصوات خفيفة للتوزيع ولعب الورق وحسم اللمّة." value={settings.soundEnabled} onChange={(soundEnabled) => updateSettings({ soundEnabled })} /></Section>
+        <Section title="للاعبين المتقدمين"><ToggleRow label="مؤشر قوة الأنواع" description="يعرض الاقتراح والدرجات وأيقونة شرح طريقة الاحتساب في المزايدة." value={settings.showStrengthIndicator} onChange={(showStrengthIndicator) => updateSettings({ showStrengthIndicator })} /></Section>
         <View style={styles.note}><Text style={styles.noteTitle}>اللعب الجماعي</Text><Text style={styles.noteText}>هذه النسخة تعمل محليًا على جهاز واحد. سيُضاف إنشاء الغرف ودعوات الأصدقاء في مرحلة توسعة مستقلة.</Text></View>
       </ScrollView>
     </SafeAreaView>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardBeats, createHomeState, createRound, legalCards, resolveTrick, submitBid, suitStrength } from "../lib/tarneeb/engine";
+import { cardBeats, createHomeState, createRound, DEFAULT_SETTINGS, legalCards, resolveTrick, submitBid, suitStrength } from "../lib/tarneeb/engine";
 import type { Card, Trick } from "../lib/tarneeb/types";
 
 const card = (suit: Card["suit"], rank: Card["rank"]): Card => ({ id: `${suit}-${rank}`, suit, rank });
@@ -37,5 +37,9 @@ describe("محرك طرنيب", () => {
     expect(spades.score).toBeGreaterThan(hearts.score);
     expect(spades.label).toBe("قوي");
     expect(spades.bars).toBeGreaterThan(hearts.bars);
+  });
+
+  it("يبقي مؤشر القوة ظاهرًا افتراضيًا مع إمكان تعطيله من الإعدادات", () => {
+    expect(DEFAULT_SETTINGS.showStrengthIndicator).toBe(true);
   });
 });

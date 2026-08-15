@@ -23,6 +23,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   aiLevel: "متوازن",
   hapticsEnabled: true,
   soundEnabled: true,
+  showStrengthIndicator: true,
 };
 
 export function teamOf(seat: Seat): Team {
