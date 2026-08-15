@@ -1,5 +1,5 @@
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useGame } from "@/lib/tarneeb/game-context";
 import { useLocalRoom } from "@/lib/tarneeb/local-room-context";
@@ -26,7 +26,7 @@ export default function GameScreen() {
 
   return (
     <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
-      <GameTable state={state} onCardPress={(cardId) => {
+      <GameTable action={<MatchActions />} state={state} onCardPress={(cardId) => {
         const card = state.players[0].hand.find((item) => item.id === cardId);
         if (card && legalCards(state.players[0].hand, state.trick).some((item) => item.id === card.id)) {
           if (isNetworkMatch) room.requestCard(card.id);
@@ -78,6 +78,36 @@ function ConnectionLostScreen({ message, onReturn }: { message: string; onReturn
   return <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}><View style={styles.centerPage}><Text style={styles.connectionKicker}>الغرفة المحلية</Text><Text style={styles.pageTitle}>انقطع الاتصال</Text><Text style={styles.connectionMessage}>{message}</Text><PrimaryButton label="العودة للرئيسية" onPress={onReturn} /></View></SafeAreaView>;
 }
 
+function MatchActions() {
+  const game = useGame();
+  const room = useLocalRoom();
+  const [visible, setVisible] = useState(false);
+  const [confirmation, setConfirmation] = useState<"restart" | "exit" | null>(null);
+  const isRoomMatch = game.state.matchMode === "localRoom";
+  const canRestart = !isRoomMatch || room.role === "host";
+  const isRestartConfirmation = confirmation === "restart";
+
+  const close = () => {
+    setConfirmation(null);
+    setVisible(false);
+  };
+  const restart = () => {
+    close();
+    if (isRoomMatch) room.startRoomMatch();
+    else game.startMatch();
+  };
+  const exit = () => {
+    close();
+    if (isRoomMatch) {
+      void room.leaveRoom().finally(() => game.exitMatch());
+      return;
+    }
+    game.exitMatch();
+  };
+
+  return <><Pressable accessibilityRole="button" accessibilityLabel="خيارات المباراة" hitSlop={8} onPress={() => setVisible(true)} style={({ pressed }) => [styles.matchActionsButton, pressed && styles.matchActionsButtonPressed]}><Text style={styles.matchActionsButtonText}>⋮</Text></Pressable><Modal transparent visible={visible} animationType="fade" onRequestClose={close}><View style={styles.gameMenuModal}><Pressable accessibilityLabel="إغلاق خيارات المباراة" style={styles.gameMenuBackdrop} onPress={() => confirmation ? setConfirmation(null) : close()} />{confirmation ? <View style={styles.gameMenuSheet}><View style={styles.gameMenuHandle} /><Text style={styles.gameMenuTitle}>{isRestartConfirmation ? "إعادة بدء المباراة؟" : "العودة للرئيسية؟"}</Text><Text style={styles.gameMenuDescription}>{isRestartConfirmation ? (isRoomMatch ? "ستبدأ مباراة جديدة لجميع لاعبي الغرفة وستعود النقاط إلى الصفر." : "سيجري توزيع أوراق جديدة وستعود نقاط الفريقين إلى الصفر.") : (isRoomMatch ? "ستغادر الغرفة المحلية ولن تستطيع متابعة هذه المباراة من هذا الجهاز." : "ستنهي المباراة الحالية وسيُحذف التقدم المحفوظ لهذه المباراة.")}</Text><View style={styles.confirmationButtons}><Pressable onPress={() => setConfirmation(null)} style={({ pressed }) => [styles.confirmationCancel, pressed && styles.buttonPressed]}><Text style={styles.confirmationCancelText}>إلغاء</Text></Pressable><Pressable onPress={isRestartConfirmation ? restart : exit} style={({ pressed }) => [styles.confirmationDestructive, pressed && styles.buttonPressed]}><Text style={styles.confirmationDestructiveText}>{isRestartConfirmation ? "إعادة البدء" : "إنهاء المباراة"}</Text></Pressable></View></View> : <View style={styles.gameMenuSheet}><View style={styles.gameMenuHandle} /><Text style={styles.gameMenuTitle}>خيارات المباراة</Text><Text style={styles.gameMenuDescription}>تحكم في المباراة الحالية من دون مغادرة الطاولة.</Text>{canRestart ? <Pressable accessibilityRole="button" accessibilityLabel="إعادة بدء المباراة" onPress={() => setConfirmation("restart")} style={({ pressed }) => [styles.matchAction, styles.matchActionRestart, pressed && styles.buttonPressed]}><View style={styles.matchActionIcon}><Text style={styles.matchActionIconText}>↻</Text></View><View style={styles.matchActionContent}><Text style={styles.matchActionTitle}>إعادة بدء المباراة</Text><Text style={styles.matchActionSubtitle}>توزيع جديد وتصفير النقاط</Text></View></Pressable> : <View style={[styles.matchAction, styles.matchActionDisabled]}><View style={styles.matchActionIcon}><Text style={styles.matchActionIconText}>↻</Text></View><View style={styles.matchActionContent}><Text style={styles.matchActionTitle}>إعادة بدء المباراة</Text><Text style={styles.matchActionSubtitle}>متاح للمضيف فقط</Text></View></View>}<Pressable accessibilityRole="button" accessibilityLabel="إنهاء المباراة والعودة للرئيسية" onPress={() => setConfirmation("exit")} style={({ pressed }) => [styles.matchAction, styles.matchActionExit, pressed && styles.buttonPressed]}><View style={styles.matchActionIcon}><Text style={styles.matchActionIconText}>⌂</Text></View><View style={styles.matchActionContent}><Text style={styles.matchActionTitle}>إنهاء المباراة</Text><Text style={styles.matchActionSubtitle}>العودة إلى الشاشة الرئيسية</Text></View></Pressable><Pressable onPress={close} style={({ pressed }) => [styles.gameMenuCancel, pressed && styles.buttonPressed]}><Text style={styles.gameMenuCancelText}>إلغاء</Text></Pressable></View>}</View></Modal></>;
+}
+
 function Feature({ label, text }: { label: string; text: string }) {
   return <View style={styles.feature}><Text style={styles.featureLabel}>{label}</Text><Text style={styles.featureText}>{text}</Text></View>;
 }
@@ -94,7 +124,7 @@ function Bidding() {
   return (
     <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <RoundHeader round={state.round} label="المزايدة" />
+        <RoundHeader round={state.round} label="المزايدة" action={<MatchActions />} />
         <View style={styles.panel}>
           <Text style={styles.panelEyebrow}>العرض الأعلى</Text>
           <Text style={styles.bidValue}>{highest ?? "—"}</Text>
@@ -127,6 +157,7 @@ function TrumpSelection() {
   return (
     <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
       <ScrollView contentContainerStyle={styles.trumpContent}>
+        <View style={styles.trumpTopBar}><MatchActions /></View>
         <Text style={styles.kicker}>الطلب {state.bidding.highestBid}</Text>
         <Text style={styles.pageTitle}>{humanIsBidder ? "اختر الطرنيب" : "يختار الخصم الطرنيب"}</Text>
         <Text style={styles.pageSubtitle}>{humanIsBidder ? "حدد النوع الذي يمنح فريقك أفضل فرصة للفوز باللمم." : `${state.players[state.bidding.highestBidder!].name} يراجع أوراقه…`}</Text>
@@ -157,8 +188,8 @@ function RoundResult() {
   );
 }
 
-function RoundHeader({ round, label }: { round: number; label: string }) {
-  return <View style={styles.roundHeader}><Text style={styles.roundBrand}>طرنيب</Text><View><Text style={styles.roundNumber}>الجولة {round}</Text><Text style={styles.roundLabel}>{label}</Text></View></View>;
+function RoundHeader({ round, label, action }: { round: number; label: string; action?: ReactNode }) {
+  return <View style={styles.roundHeader}><Text style={styles.roundBrand}>طرنيب</Text><View><Text style={styles.roundNumber}>الجولة {round}</Text><Text style={styles.roundLabel}>{label}</Text></View>{action}</View>;
 }
 
 function ScoreBlock({ label, score, change }: { label: string; score: number; change: number }) {
@@ -307,4 +338,30 @@ const styles = StyleSheet.create({
   localMatchButtonHint: { color: "#B4D6C7", fontSize: 11, marginTop: 3, writingDirection: "rtl" },
   connectionKicker: { color: "#E3B341", fontSize: 14, fontWeight: "800", writingDirection: "rtl" },
   connectionMessage: { color: "#B4D6C7", fontSize: 15, lineHeight: 23, textAlign: "center", marginTop: 10, marginBottom: 30, writingDirection: "rtl", maxWidth: 280 },
+  matchActionsButton: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: "rgba(255,248,231,0.3)", backgroundColor: "rgba(255,248,231,0.12)", alignItems: "center", justifyContent: "center" },
+  matchActionsButtonPressed: { transform: [{ scale: 0.94 }], opacity: 0.74 },
+  matchActionsButtonText: { color: "#FFF8E7", fontSize: 24, fontWeight: "900", lineHeight: 24, marginTop: -5 },
+  trumpTopBar: { alignSelf: "stretch", alignItems: "flex-start", marginBottom: 12 },
+  gameMenuModal: { flex: 1, justifyContent: "flex-end", padding: 16 },
+  gameMenuBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(3,20,14,0.78)" },
+  gameMenuSheet: { width: "100%", maxWidth: 500, alignSelf: "center", backgroundColor: "#FFF8E7", borderRadius: 26, padding: 20, shadowColor: "#000", shadowOpacity: 0.32, shadowRadius: 18, elevation: 12 },
+  gameMenuHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: "#C9C1AF", alignSelf: "center", marginBottom: 16 },
+  gameMenuTitle: { color: "#0E3B2E", fontSize: 21, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
+  gameMenuDescription: { color: "#52635C", fontSize: 13, lineHeight: 20, textAlign: "right", marginTop: 5, marginBottom: 18, writingDirection: "rtl" },
+  matchAction: { flexDirection: "row-reverse", alignItems: "center", gap: 12, minHeight: 72, borderRadius: 17, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, marginTop: 10 },
+  matchActionRestart: { backgroundColor: "#E8F6EF", borderColor: "#B9E2CC" },
+  matchActionExit: { backgroundColor: "#FFF1EE", borderColor: "#F3C7C0" },
+  matchActionDisabled: { backgroundColor: "#F2ECDD", borderColor: "#DED5C3", opacity: 0.64 },
+  matchActionIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(14,59,46,0.1)", alignItems: "center", justifyContent: "center" },
+  matchActionIconText: { color: "#0E3B2E", fontSize: 23, fontWeight: "900", lineHeight: 26 },
+  matchActionContent: { flex: 1, alignItems: "flex-start" },
+  matchActionTitle: { color: "#0E3B2E", fontSize: 15, fontWeight: "900", writingDirection: "rtl" },
+  matchActionSubtitle: { color: "#52635C", fontSize: 11, marginTop: 3, writingDirection: "rtl" },
+  gameMenuCancel: { minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: "#CFC6B5", alignItems: "center", justifyContent: "center", marginTop: 16 },
+  gameMenuCancelText: { color: "#52635C", fontSize: 14, fontWeight: "900", writingDirection: "rtl" },
+  confirmationButtons: { flexDirection: "row-reverse", gap: 10, marginTop: 6 },
+  confirmationCancel: { flex: 1, minHeight: 48, borderRadius: 14, backgroundColor: "#E9E3D4", alignItems: "center", justifyContent: "center" },
+  confirmationCancelText: { color: "#52635C", fontSize: 14, fontWeight: "900", writingDirection: "rtl" },
+  confirmationDestructive: { flex: 1, minHeight: 48, borderRadius: 14, backgroundColor: "#B8463A", alignItems: "center", justifyContent: "center" },
+  confirmationDestructiveText: { color: "#FFF8E7", fontSize: 14, fontWeight: "900", writingDirection: "rtl" },
 });

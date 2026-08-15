@@ -4,11 +4,11 @@ import { CurvedCardHand } from "./card-fan";
 import { cardLabel, legalCards, suitName, suitSymbol } from "@/lib/tarneeb/engine";
 import { getNativeTableLayout } from "@/lib/tarneeb/native-ui-layout";
 import type { MatchState } from "@/lib/tarneeb/types";
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 
-export function GameTable({ state, onCardPress }: { state: MatchState; onCardPress: (cardId: string) => void }) {
+export function GameTable({ state, onCardPress, action }: { state: MatchState; onCardPress: (cardId: string) => void; action?: ReactNode }) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const nativeLayout = getNativeTableLayout({ width, height, insets });
@@ -25,7 +25,7 @@ export function GameTable({ state, onCardPress }: { state: MatchState; onCardPre
           <View style={styles.teamHeading}><Text style={styles.scoreLabel}>فريقك</Text><View style={styles.trickBadge}><Text style={styles.trickBadgeValue}>{state.tricksWon[0]}</Text><Text style={styles.trickBadgeLabel}>لمم</Text></View></View>
           <Text style={styles.scoreValue}>{state.scores[0]}</Text>
         </View>
-        <View style={styles.contractPill}><Text style={styles.contractText}>الطلب {state.bidding.highestBid} · {trump ? `${suitName(trump)} ${suitSymbol(trump)}` : "بانتظار الطرنيب"}</Text></View>
+        <View style={styles.contractPill}>{action}<Text style={styles.contractText}>الطلب {state.bidding.highestBid} · {trump ? `${suitName(trump)} ${suitSymbol(trump)}` : "بانتظار الطرنيب"}</Text></View>
         <View style={styles.scorePill}>
           <View style={styles.teamHeading}><Text style={styles.scoreLabel}>الخصم</Text><View style={styles.trickBadge}><Text style={styles.trickBadgeValue}>{state.tricksWon[1]}</Text><Text style={styles.trickBadgeLabel}>لمم</Text></View></View>
           <Text style={styles.scoreValue}>{state.scores[1]}</Text>
@@ -173,8 +173,8 @@ const styles = StyleSheet.create({
   trickBadge: { flexDirection: "row", alignItems: "baseline", gap: 2, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 9, backgroundColor: "#E3B341" },
   trickBadgeValue: { color: "#173C2F", fontSize: 12, fontWeight: "900" },
   trickBadgeLabel: { color: "#173C2F", fontSize: 9, fontWeight: "900" },
-  contractPill: { flex: 1, alignItems: "center", paddingHorizontal: 4 },
-  contractText: { color: "#F5D889", fontSize: 12, fontWeight: "700", textAlign: "center", writingDirection: "rtl" },
+  contractPill: { flex: 1, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 5, paddingHorizontal: 4 },
+  contractText: { flexShrink: 1, color: "#F5D889", fontSize: 12, fontWeight: "700", textAlign: "center", writingDirection: "rtl" },
   table: { flex: 1, minHeight: 330, marginTop: 10, borderRadius: 28, backgroundColor: "#16624A", borderWidth: 1, borderColor: "rgba(245,216,137,0.4)", overflow: "hidden" },
   playerSeat: { position: "absolute", flexDirection: "row", alignItems: "center", gap: 5, padding: 6, borderRadius: 16, borderWidth: 1, borderColor: "transparent" },
   top: { top: 10, alignSelf: "center", flexDirection: "column", alignItems: "center" },

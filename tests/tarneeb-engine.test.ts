@@ -30,6 +30,23 @@ describe("محرك طرنيب", () => {
     expect(next.bidding.currentPlayer).toBe(1);
   });
 
+  it("يعيد بدء المباراة بجولة مزايدة جديدة مع تصفير النقاط واللمم", () => {
+    const inProgress = {
+      ...createRound(createHomeState(), true),
+      round: 4,
+      scores: { 0: 19, 1: 14 },
+      tricksWon: { 0: 5, 1: 3 },
+    };
+    const restarted = createRound(createHomeState(), true);
+
+    expect(inProgress.scores).toEqual({ 0: 19, 1: 14 });
+    expect(restarted.phase).toBe("bidding");
+    expect(restarted.round).toBe(1);
+    expect(restarted.scores).toEqual({ 0: 0, 1: 0 });
+    expect(restarted.tricksWon).toEqual({ 0: 0, 1: 0 });
+    expect(restarted.players).toHaveLength(4);
+  });
+
   it("يقيم النوع الطويل ذي الأوراق العالية باعتباره أقوى للطرنيب", () => {
     const hand = [card("spades", 14), card("spades", 13), card("spades", 12), card("spades", 11), card("spades", 8), card("spades", 3), card("hearts", 14), card("hearts", 2)];
     const spades = suitStrength(hand, "spades");
