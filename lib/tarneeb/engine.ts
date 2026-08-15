@@ -25,6 +25,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   soundEnabled: true,
   showStrengthIndicator: true,
   cardFanCurve: "balanced",
+  cardBackPattern: "royal",
 };
 
 export function teamOf(seat: Seat): Team {

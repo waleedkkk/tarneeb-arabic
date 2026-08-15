@@ -5,7 +5,7 @@ import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSequen
 
 import { PlayingCard } from "./card";
 import { getBalancedFanCardPosition, getCardDragDropThreshold, getFanEdgeHitSlop, getResponsiveFanMetrics, isCardDragDrop } from "@/lib/tarneeb/card-fan-layout";
-import type { Card, CardFanCurve } from "@/lib/tarneeb/types";
+import type { Card, CardBackPattern, CardFanCurve } from "@/lib/tarneeb/types";
 
 interface CurvedCardHandProps {
   cards: Card[];
@@ -13,6 +13,8 @@ interface CurvedCardHandProps {
   disabledCardIds?: string[];
   entranceStep?: number;
   curveStrength?: CardFanCurve;
+  cardBackPattern?: CardBackPattern;
+  dealFlip?: boolean;
   dragEnabled?: boolean;
   onCardDragStateChange?: (dragging: boolean) => void;
   onCardPress?: (cardId: string) => void;
@@ -25,6 +27,8 @@ export function CurvedCardHand({
   disabledCardIds = [],
   entranceStep = 22,
   curveStrength = "balanced",
+  cardBackPattern = "royal",
+  dealFlip = true,
   dragEnabled = false,
   onCardDragStateChange,
   onCardPress,
@@ -47,18 +51,20 @@ export function CurvedCardHand({
           curveStrength,
         );
         const disabled = disabledCardIds.includes(card.id);
-        return <FanCardSlot key={card.id} card={card} compact={metrics.compact} disabled={disabled} dragEnabled={dragEnabled} entranceDelay={index * entranceStep} edgeFeedback={metrics.compact && (index === 0 || index === cards.length - 1)} hitSlop={getFanEdgeHitSlop(index, cards.length, metrics.compact)} position={position} onDragStateChange={onCardDragStateChange} onPlay={onCardPress ? () => onCardPress(card.id) : undefined} />;
+        return <FanCardSlot key={card.id} card={card} compact={metrics.compact} disabled={disabled} dragEnabled={dragEnabled} entranceDelay={index * entranceStep} cardBackPattern={cardBackPattern} dealFlip={dealFlip} edgeFeedback={metrics.compact && (index === 0 || index === cards.length - 1)} hitSlop={getFanEdgeHitSlop(index, cards.length, metrics.compact)} position={position} onDragStateChange={onCardDragStateChange} onPlay={onCardPress ? () => onCardPress(card.id) : undefined} />;
       })}
     </View>
   );
 }
 
-function FanCardSlot({ card, compact, disabled, dragEnabled, entranceDelay, edgeFeedback, hitSlop, position, onDragStateChange, onPlay }: {
+function FanCardSlot({ card, compact, disabled, dragEnabled, entranceDelay, cardBackPattern, dealFlip, edgeFeedback, hitSlop, position, onDragStateChange, onPlay }: {
   card: Card;
   compact: boolean;
   disabled: boolean;
   dragEnabled: boolean;
   entranceDelay: number;
+  cardBackPattern: CardBackPattern;
+  dealFlip: boolean;
   edgeFeedback: boolean;
   hitSlop: ReturnType<typeof getFanEdgeHitSlop>;
   position: ReturnType<typeof getBalancedFanCardPosition>;
@@ -129,7 +135,7 @@ function FanCardSlot({ card, compact, disabled, dragEnabled, entranceDelay, edge
     <Animated.View style={[styles.cardSlot, { left: position.left, bottom: position.bottom, zIndex: position.zIndex }, departureStyle]}>
       <GestureDetector gesture={drag}>
         <View>
-          <PlayingCard card={card} compact={compact} entranceDelay={entranceDelay} disabled={disabled || departing} hitSlop={hitSlop} edgeFeedback={edgeFeedback} onPress={onPlay ? playCard : undefined} />
+          <PlayingCard card={card} compact={compact} entranceDelay={entranceDelay} cardBackPattern={cardBackPattern} dealFlip={dealFlip} disabled={disabled || departing} hitSlop={hitSlop} edgeFeedback={edgeFeedback} onPress={onPlay ? playCard : undefined} />
         </View>
       </GestureDetector>
     </Animated.View>

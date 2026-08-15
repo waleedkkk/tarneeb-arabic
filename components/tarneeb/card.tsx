@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, type Insets, View } from "react-native";
 import { cardLabel, rankLabel, suitSymbol } from "@/lib/tarneeb/engine";
-import type { Card as CardType } from "@/lib/tarneeb/types";
+import type { Card as CardType, CardBackPattern } from "@/lib/tarneeb/types";
 import { useEffect } from "react";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from "react-native-reanimated";
 
@@ -13,17 +13,23 @@ interface CardProps {
   hitSlop?: Insets;
   edgeFeedback?: boolean;
   entranceDelay?: number;
+  dealFlip?: boolean;
+  cardBackPattern?: CardBackPattern;
 }
 
-export function PlayingCard({ card, onPress, disabled = false, selected = false, compact = false, hitSlop, edgeFeedback = false, entranceDelay = 0 }: CardProps) {
+export function PlayingCard({ card, onPress, disabled = false, selected = false, compact = false, hitSlop, edgeFeedback = false, entranceDelay = 0, dealFlip = false, cardBackPattern = "royal" }: CardProps) {
   const red = card.suit === "hearts" || card.suit === "diamonds";
   const reveal = useSharedValue(0);
+  const flip = useSharedValue(dealFlip ? 0 : 1);
   const lift = useSharedValue(selected ? -8 : 0);
   const edgeGlow = useSharedValue(0);
 
   useEffect(() => {
+    reveal.value = 0;
+    flip.value = dealFlip ? 0 : 1;
     reveal.value = withDelay(entranceDelay, withTiming(1, { duration: compact ? 190 : 260, easing: Easing.out(Easing.cubic) }));
-  }, [compact, entranceDelay, reveal]);
+    if (dealFlip) flip.value = withDelay(entranceDelay + 45, withTiming(1, { duration: compact ? 210 : 270, easing: Easing.inOut(Easing.cubic) }));
+  }, [compact, dealFlip, entranceDelay, flip, reveal]);
 
   useEffect(() => {
     lift.value = withTiming(selected ? -8 : 0, { duration: 150, easing: Easing.out(Easing.cubic) });
@@ -40,6 +46,12 @@ export function PlayingCard({ card, onPress, disabled = false, selected = false,
     opacity: edgeGlow.value,
     transform: [{ scale: 1 + edgeGlow.value * 0.025 }],
   }));
+  const faceFlipStyle = useAnimatedStyle(() => ({
+    transform: [{ perspective: 680 }, { rotateY: `${(1 - flip.value) * 180}deg` }],
+  }));
+  const backFlipStyle = useAnimatedStyle(() => ({
+    transform: [{ perspective: 680 }, { rotateY: `${flip.value * -180}deg` }],
+  }));
   const showEdgeFeedback = () => {
     if (!edgeFeedback || disabled) return;
     edgeGlow.value = withSequence(
@@ -48,11 +60,14 @@ export function PlayingCard({ card, onPress, disabled = false, selected = false,
     );
   };
   const content = (
-    <Animated.View style={[styles.card, compact && styles.compactCard, selected && styles.selectedCard, disabled && styles.disabledCard, revealStyle]}>
-      {edgeFeedback && !disabled && <Animated.View pointerEvents="none" style={[styles.edgeGlow, edgeGlowStyle]} />}
-      <Text style={[styles.rank, compact && styles.compactRank, red ? styles.red : styles.black]}>{rankLabel(card.rank)}</Text>
-      <Text style={[styles.suit, compact && styles.compactSuit, red ? styles.red : styles.black]}>{suitSymbol(card.suit)}</Text>
-      {!compact && <Text style={[styles.centerSuit, red ? styles.red : styles.black]}>{suitSymbol(card.suit)}</Text>}
+    <Animated.View style={[styles.cardStage, compact && styles.compactCardStage, revealStyle]}>
+      <Animated.View style={[styles.card, styles.cardFace, compact && styles.compactCard, selected && styles.selectedCard, disabled && styles.disabledCard, faceFlipStyle]}>
+        {edgeFeedback && !disabled && <Animated.View pointerEvents="none" style={[styles.edgeGlow, edgeGlowStyle]} />}
+        <Text style={[styles.rank, compact && styles.compactRank, red ? styles.red : styles.black]}>{rankLabel(card.rank)}</Text>
+        <Text style={[styles.suit, compact && styles.compactSuit, red ? styles.red : styles.black]}>{suitSymbol(card.suit)}</Text>
+        {!compact && <Text style={[styles.centerSuit, red ? styles.red : styles.black]}>{suitSymbol(card.suit)}</Text>}
+      </Animated.View>
+      {dealFlip && <Animated.View pointerEvents="none" style={[styles.cardBackFace, backFlipStyle]}><CardBack compact={compact} pattern={cardBackPattern} size="card" /></Animated.View>}
     </Animated.View>
   );
   if (!onPress) return content;
@@ -71,22 +86,16 @@ export function PlayingCard({ card, onPress, disabled = false, selected = false,
   );
 }
 
-export function CardBack({ compact = false }: { compact?: boolean }) {
+export function CardBack({ compact = false, pattern = "royal", size = "seat" }: { compact?: boolean; pattern?: CardBackPattern; size?: "seat" | "card" }) {
+  const theme = CARD_BACK_THEMES[pattern];
   return (
-    <View style={[styles.back, compact && styles.compactBack]}>
-      <View style={styles.backFrame}>
-        <View style={styles.backInner}>
-          <View pointerEvents="none" style={styles.backPattern}>
-            <View style={[styles.patternDiamond, styles.patternDiamondTop]} />
-            <View style={[styles.patternDiamond, styles.patternDiamondUpperLeft]} />
-            <View style={[styles.patternDiamond, styles.patternDiamondUpperRight]} />
-            <View style={[styles.patternDiamond, styles.patternDiamondLowerLeft]} />
-            <View style={[styles.patternDiamond, styles.patternDiamondLowerRight]} />
-            <View style={[styles.patternDiamond, styles.patternDiamondBottom]} />
-          </View>
-          <View style={styles.backMedallion}>
-            <View style={styles.backMedallionInner}>
-              <Text style={[styles.backMark, compact && styles.compactBackMark]}>ط</Text>
+    <View style={[styles.back, compact && styles.compactBack, size === "card" && styles.fullCardBack, size === "card" && compact && styles.compactFullCardBack]}>
+      <View style={[styles.backFrame, theme.frame]}>
+        <View style={[styles.backInner, theme.inner]}>
+          <BackPattern pattern={pattern} colorStyle={theme.pattern} />
+          <View style={[styles.backMedallion, theme.medallion]}>
+            <View style={[styles.backMedallionInner, theme.medallionInner]}>
+              <Text style={[styles.backMark, theme.mark, compact && styles.compactBackMark]}>ط</Text>
             </View>
           </View>
         </View>
@@ -95,11 +104,43 @@ export function CardBack({ compact = false }: { compact?: boolean }) {
   );
 }
 
+function BackPattern({ pattern, colorStyle }: { pattern: CardBackPattern; colorStyle: object }) {
+  if (pattern === "navy") {
+    return <View pointerEvents="none" style={styles.backPattern}>
+      <View style={[styles.weaveLine, styles.weaveLineOne, colorStyle]} />
+      <View style={[styles.weaveLine, styles.weaveLineTwo, colorStyle]} />
+      <View style={[styles.weaveLine, styles.weaveLineThree, colorStyle]} />
+      <View style={[styles.weaveLine, styles.weaveLineFour, colorStyle]} />
+    </View>;
+  }
+  if (pattern === "emerald") {
+    return <View pointerEvents="none" style={styles.backPattern}>
+      <View style={[styles.rosette, styles.rosetteTopLeft, colorStyle]} />
+      <View style={[styles.rosette, styles.rosetteTopRight, colorStyle]} />
+      <View style={[styles.rosette, styles.rosetteBottomLeft, colorStyle]} />
+      <View style={[styles.rosette, styles.rosetteBottomRight, colorStyle]} />
+      <View style={[styles.rosette, styles.rosetteCenter, colorStyle]} />
+    </View>;
+  }
+  return <View pointerEvents="none" style={styles.backPattern}>
+    <View style={[styles.patternDiamond, styles.patternDiamondTop, colorStyle]} />
+    <View style={[styles.patternDiamond, styles.patternDiamondUpperLeft, colorStyle]} />
+    <View style={[styles.patternDiamond, styles.patternDiamondUpperRight, colorStyle]} />
+    <View style={[styles.patternDiamond, styles.patternDiamondLowerLeft, colorStyle]} />
+    <View style={[styles.patternDiamond, styles.patternDiamondLowerRight, colorStyle]} />
+    <View style={[styles.patternDiamond, styles.patternDiamondBottom, colorStyle]} />
+  </View>;
+}
+
 const styles = StyleSheet.create({
   pressable: { marginHorizontal: 2 },
   pressed: { transform: [{ translateY: -8 }], opacity: 0.9 },
+  cardStage: { width: 60, height: 90 },
+  compactCardStage: { width: 48, height: 68 },
   card: { width: 60, height: 90, borderRadius: 10, backgroundColor: "#FFF8E7", borderWidth: 1, borderColor: "#D8CDAF", padding: 6, justifyContent: "space-between", shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 4, elevation: 3 },
   compactCard: { width: 48, height: 68, borderRadius: 8, padding: 4 },
+  cardFace: { position: "absolute", backfaceVisibility: "hidden" },
+  cardBackFace: { position: "absolute", top: 0, left: 0, backfaceVisibility: "hidden" },
   edgeGlow: { ...StyleSheet.absoluteFillObject, borderRadius: 10, backgroundColor: "rgba(227, 179, 65, 0.22)", borderColor: "#E3B341", borderWidth: 2 },
   selectedCard: { borderWidth: 2.5, borderColor: "#38BDF8" },
   disabledCard: { opacity: 0.42 },
@@ -112,6 +153,8 @@ const styles = StyleSheet.create({
   black: { color: "#17211D" },
   back: { width: 35, height: 50, padding: 2, borderRadius: 7, backgroundColor: "#FFF8E7", borderWidth: 1, borderColor: "#D8CDAF", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 2, elevation: 2 },
   compactBack: { width: 27, height: 38, borderRadius: 6 },
+  fullCardBack: { width: 60, height: 90, borderRadius: 10, padding: 4 },
+  compactFullCardBack: { width: 48, height: 68, borderRadius: 8, padding: 3 },
   backFrame: { flex: 1, borderRadius: 5, borderWidth: 1, borderColor: "#9E1F2E", padding: 1.5, backgroundColor: "#F5DDA0" },
   backInner: { flex: 1, overflow: "hidden", borderRadius: 3, borderWidth: 1, borderColor: "#FDEEC5", alignItems: "center", justifyContent: "center", backgroundColor: "#A61E2D" },
   backPattern: { ...StyleSheet.absoluteFillObject },
@@ -122,8 +165,43 @@ const styles = StyleSheet.create({
   patternDiamondLowerLeft: { bottom: "31%", left: 3 },
   patternDiamondLowerRight: { bottom: "31%", right: 3 },
   patternDiamondBottom: { bottom: 3, left: "42%" },
+  weaveLine: { position: "absolute", width: "150%", height: 1, opacity: 0.6 },
+  weaveLineOne: { top: "21%", left: "-26%", transform: [{ rotate: "35deg" }] },
+  weaveLineTwo: { top: "43%", left: "-26%", transform: [{ rotate: "-35deg" }] },
+  weaveLineThree: { bottom: "21%", left: "-26%", transform: [{ rotate: "35deg" }] },
+  weaveLineFour: { bottom: "43%", left: "-26%", transform: [{ rotate: "-35deg" }] },
+  rosette: { position: "absolute", width: 7, height: 7, borderRadius: 3.5, borderWidth: 1.25, opacity: 0.72 },
+  rosetteTopLeft: { top: "20%", left: "18%" },
+  rosetteTopRight: { top: "20%", right: "18%" },
+  rosetteBottomLeft: { bottom: "20%", left: "18%" },
+  rosetteBottomRight: { bottom: "20%", right: "18%" },
+  rosetteCenter: { top: "43%", left: "39%" },
   backMedallion: { width: 17, height: 17, borderRadius: 9, padding: 1.5, borderWidth: 1, borderColor: "#FBE7AF", backgroundColor: "#8C1727", alignItems: "center", justifyContent: "center" },
   backMedallionInner: { width: "100%", height: "100%", borderRadius: 8, borderWidth: 1, borderColor: "#F2C765", alignItems: "center", justifyContent: "center", backgroundColor: "#B82738" },
   backMark: { color: "#FFF4CE", fontWeight: "900", fontSize: 11, lineHeight: 13 },
   compactBackMark: { fontSize: 9, lineHeight: 11 },
+  royalFrame: { backgroundColor: "#F5DDA0", borderColor: "#9E1F2E" },
+  royalInner: { backgroundColor: "#A61E2D", borderColor: "#FDEEC5" },
+  royalPattern: { backgroundColor: "#F8D987" },
+  royalMedallion: { backgroundColor: "#8C1727", borderColor: "#FBE7AF" },
+  royalMedallionInner: { backgroundColor: "#B82738", borderColor: "#F2C765" },
+  royalMark: { color: "#FFF4CE" },
+  navyFrame: { backgroundColor: "#DDE7F0", borderColor: "#1B3857" },
+  navyInner: { backgroundColor: "#173653", borderColor: "#F1F6FA" },
+  navyPattern: { backgroundColor: "#9FC5DD", borderColor: "#9FC5DD" },
+  navyMedallion: { backgroundColor: "#102B46", borderColor: "#D9EBF6" },
+  navyMedallionInner: { backgroundColor: "#245177", borderColor: "#9FC5DD" },
+  navyMark: { color: "#EFF8FF" },
+  emeraldFrame: { backgroundColor: "#E2E7D0", borderColor: "#295B44" },
+  emeraldInner: { backgroundColor: "#1F674D", borderColor: "#F1F4DF" },
+  emeraldPattern: { backgroundColor: "#D4DD9A", borderColor: "#D4DD9A" },
+  emeraldMedallion: { backgroundColor: "#16513D", borderColor: "#EDF0C8" },
+  emeraldMedallionInner: { backgroundColor: "#2E795A", borderColor: "#D4DD9A" },
+  emeraldMark: { color: "#FFFFE6" },
 });
+
+const CARD_BACK_THEMES = {
+  royal: { frame: styles.royalFrame, inner: styles.royalInner, pattern: styles.royalPattern, medallion: styles.royalMedallion, medallionInner: styles.royalMedallionInner, mark: styles.royalMark },
+  navy: { frame: styles.navyFrame, inner: styles.navyInner, pattern: styles.navyPattern, medallion: styles.navyMedallion, medallionInner: styles.navyMedallionInner, mark: styles.navyMark },
+  emerald: { frame: styles.emeraldFrame, inner: styles.emeraldInner, pattern: styles.emeraldPattern, medallion: styles.emeraldMedallion, medallionInner: styles.emeraldMedallionInner, mark: styles.emeraldMark },
+} as const;

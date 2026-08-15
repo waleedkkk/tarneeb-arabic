@@ -59,5 +59,6 @@ describe("محرك طرنيب", () => {
   it("يضبط تفضيلات العرض الافتراضية بصورة آمنة", () => {
     expect(DEFAULT_SETTINGS.showStrengthIndicator).toBe(true);
     expect(DEFAULT_SETTINGS.cardFanCurve).toBe("balanced");
+    expect(DEFAULT_SETTINGS.cardBackPattern).toBe("royal");
   });
 });

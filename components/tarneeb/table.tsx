@@ -3,12 +3,12 @@ import { CardBack, PlayingCard } from "./card";
 import { CurvedCardHand } from "./card-fan";
 import { cardLabel, legalCards, suitName, suitSymbol } from "@/lib/tarneeb/engine";
 import { getNativeTableLayout } from "@/lib/tarneeb/native-ui-layout";
-import type { CardFanCurve, MatchState } from "@/lib/tarneeb/types";
+import type { CardBackPattern, CardFanCurve, MatchState } from "@/lib/tarneeb/types";
 import { useEffect, useState, type ReactNode } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 
-export function GameTable({ state, onCardPress, action, fanCurve }: { state: MatchState; onCardPress: (cardId: string) => void; action?: ReactNode; fanCurve: CardFanCurve }) {
+export function GameTable({ state, onCardPress, action, fanCurve, cardBackPattern }: { state: MatchState; onCardPress: (cardId: string) => void; action?: ReactNode; fanCurve: CardFanCurve; cardBackPattern: CardBackPattern }) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const nativeLayout = getNativeTableLayout({ width, height, insets });
@@ -34,9 +34,9 @@ export function GameTable({ state, onCardPress, action, fanCurve }: { state: Mat
       </View>
 
       <View style={[styles.table, { minHeight: nativeLayout.tableMinHeight, maxHeight: nativeLayout.tableMaxHeight, marginTop: nativeLayout.tableTopMargin }]}>
-        <PlayerSeat name={state.players[2].name} cards={state.players[2].handCount} position="top" active={currentSeat(state) === 2} />
-        <PlayerSeat name={state.players[3].name} cards={state.players[3].handCount} position="left" active={currentSeat(state) === 3} />
-        <PlayerSeat name={state.players[1].name} cards={state.players[1].handCount} position="right" active={currentSeat(state) === 1} />
+        <PlayerSeat name={state.players[2].name} cards={state.players[2].handCount} position="top" active={currentSeat(state) === 2} cardBackPattern={cardBackPattern} />
+        <PlayerSeat name={state.players[3].name} cards={state.players[3].handCount} position="left" active={currentSeat(state) === 3} cardBackPattern={cardBackPattern} />
+        <PlayerSeat name={state.players[1].name} cards={state.players[1].handCount} position="right" active={currentSeat(state) === 1} cardBackPattern={cardBackPattern} />
 
         <View style={styles.trickArea}>
           {humanTurn && (
@@ -54,7 +54,7 @@ export function GameTable({ state, onCardPress, action, fanCurve }: { state: Mat
 
       <View style={[styles.handArea, { height: nativeLayout.handAreaHeight, marginTop: nativeLayout.handTopMargin }]}> 
         <View style={styles.handHeader}><Text style={styles.handTitle}>أوراقك</Text><Text style={styles.handHint}>{humanTurn ? "اسحب ورقة للطاولة أو اضغط عليها" : "دور الخصم"}</Text></View>
-        <CurvedCardHand cards={hand} accessibilityLabel="يدك مرتبة ضمن قوس متساوٍ" dragEnabled={humanTurn} entranceStep={26} curveStrength={fanCurve} disabledCardIds={!humanTurn ? hand.map((card) => card.id) : hand.filter((card) => !playable.includes(card.id)).map((card) => card.id)} onCardDragStateChange={setDraggingCard} onCardPress={onCardPress} />
+        <CurvedCardHand cards={hand} accessibilityLabel="يدك مرتبة ضمن قوس متساوٍ" dragEnabled={humanTurn} entranceStep={26} curveStrength={fanCurve} cardBackPattern={cardBackPattern} dealFlip={false} disabledCardIds={!humanTurn ? hand.map((card) => card.id) : hand.filter((card) => !playable.includes(card.id)).map((card) => card.id)} onCardDragStateChange={setDraggingCard} onCardPress={onCardPress} />
       </View>
     </View>
   );
@@ -120,7 +120,7 @@ function currentSeat(state: MatchState) {
   return state.trick.plays.length === 0 ? state.trick.leaderId : ((state.trick.plays.at(-1)!.playerId + 1) % 4);
 }
 
-function PlayerSeat({ name, cards, position, active }: { name: string; cards: number; position: "top" | "left" | "right"; active: boolean }) {
+function PlayerSeat({ name, cards, position, active, cardBackPattern }: { name: string; cards: number; position: "top" | "left" | "right"; active: boolean; cardBackPattern: CardBackPattern }) {
   const isSideSeat = position !== "top";
   const cardRotation = position === "left" ? "90deg" : "-90deg";
   return (
@@ -131,7 +131,7 @@ function PlayerSeat({ name, cards, position, active }: { name: string; cards: nu
         <View style={[styles.cardBacks, isSideSeat ? styles.sideCardBacks : styles.topCardBacks]}>
           {Array.from({ length: Math.min(cards, 4) }).map((_, index) => (
             <View key={`${name}-${index}`} style={[isSideSeat ? (index === 0 ? styles.firstSideCard : styles.sideCardStack) : styles.topCardStack, isSideSeat && { transform: [{ rotate: cardRotation }] }]}>
-              <CardBack compact />
+              <CardBack compact pattern={cardBackPattern} />
             </View>
           ))}
         </View>
