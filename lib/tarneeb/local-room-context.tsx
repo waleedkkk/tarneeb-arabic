@@ -189,19 +189,26 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
     setRole("client");
     setRoomDetails(details);
     roomRef.current = details;
+    clientRef.current?.disconnect();
+    clientRef.current = null;
     try {
       let client: LocalRoomClient;
+      let rejectedByHost = false;
       client = new LocalRoomClient({
         onConnect: () => client.send({ type: "hello", protocol: PROTOCOL_VERSION, roomId: details.roomId, key: details.key, name: playerName }),
         onClose: () => {
-          if (!closingRoomRef.current) {
+          if (!closingRoomRef.current && !rejectedByHost) {
             setStatus("error");
             setError("انقطع الاتصال بمضيف الغرفة.");
           }
         },
-        onError: (message) => setError(`تعذر الاتصال بالمضيف: ${message}`),
+        onError: (message) => {
+          setStatus("error");
+          setError(`تعذر الاتصال بالمضيف: ${message}`);
+        },
         onMessage: (message) => {
           if (message.type === "error" && typeof message.message === "string") {
+            rejectedByHost = true;
             setStatus("error");
             setError(message.message);
             return;

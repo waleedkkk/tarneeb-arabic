@@ -54,15 +54,24 @@ export function roomDetailsToQrData(details: RoomConnectionDetails) {
   return `tarneeb://local?host=${encodeURIComponent(details.host)}&port=${details.port}&room=${encodeURIComponent(details.roomId)}&key=${encodeURIComponent(details.key)}`;
 }
 
-export function parseRoomQrData(value: string): RoomConnectionDetails | null {
+export type RoomQrValidation = { details: RoomConnectionDetails; message: null } | { details: null; message: string };
+
+export function validateRoomQrData(value: string): RoomQrValidation {
   const normalized = value.trim();
-  if (!normalized.startsWith("tarneeb://local?")) return null;
+  if (!normalized) return { details: null, message: "ضع رمز الغرفة أو امسحه من جهاز المضيف أولًا." };
+  if (!normalized.startsWith("tarneeb://local?")) return { details: null, message: "هذا ليس رمز غرفة طرنيب. امسح رمز QR المعروض على جهاز المضيف." };
   const parameters = new URLSearchParams(normalized.slice("tarneeb://local?".length));
   const host = parameters.get("host")?.trim() ?? "";
   const port = Number(parameters.get("port"));
   const roomId = parameters.get("room")?.trim() ?? "";
   const key = parameters.get("key")?.trim() ?? "";
   const validIpv4 = /^\d{1,3}(\.\d{1,3}){3}$/.test(host) && host.split(".").every((part) => Number(part) <= 255);
-  if (!validIpv4 || !Number.isInteger(port) || port < 1024 || port > 65535 || !roomId || !key) return null;
-  return { host, port, roomId, key };
+  if (!validIpv4) return { details: null, message: "رمز الغرفة لا يحتوي على عنوان شبكة محلية صالح." };
+  if (!Number.isInteger(port) || port < 1024 || port > 65535) return { details: null, message: "رمز الغرفة يحتوي على منفذ اتصال غير صالح." };
+  if (!roomId || !key) return { details: null, message: "رمز الغرفة ناقص. اطلب من المضيف عرض رمز جديد." };
+  return { details: { host, port, roomId, key }, message: null };
+}
+
+export function parseRoomQrData(value: string): RoomConnectionDetails | null {
+  return validateRoomQrData(value).details;
 }
