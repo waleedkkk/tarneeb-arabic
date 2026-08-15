@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getEqualFanCardPosition, getResponsiveFanMetrics } from "../lib/tarneeb/card-fan-layout";
+import { getEqualFanCardPosition, getFanEdgeHitSlop, getResponsiveFanMetrics } from "../lib/tarneeb/card-fan-layout";
 
 describe("equal card fan layout", () => {
   it("keeps the center card upright and highest", () => {
@@ -37,5 +37,12 @@ describe("equal card fan layout", () => {
 
     expect(left.bottom).toBe(right.bottom);
     expect(left.rotation).toBe(-right.rotation);
+  });
+
+  it("expands compact fan edge hit areas only toward the exposed side", () => {
+    expect(getFanEdgeHitSlop(0, 13, true)).toMatchObject({ left: 14, right: 4 });
+    expect(getFanEdgeHitSlop(12, 13, true)).toMatchObject({ left: 4, right: 14 });
+    expect(getFanEdgeHitSlop(6, 13, true)).toBeUndefined();
+    expect(getFanEdgeHitSlop(0, 13, false)).toBeUndefined();
   });
 });

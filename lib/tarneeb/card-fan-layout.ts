@@ -37,6 +37,24 @@ export function getResponsiveFanMetrics(viewportWidth: number): ResponsiveFanMet
 }
 
 /**
+ * توسّع الهدف التفاعلي لبطاقتي طرف القوس من الجهة المكشوفة فقط، لتفادي
+ * التداخل مع بقية الأوراق في الشاشات الضيقة.
+ */
+export function getFanEdgeHitSlop(index: number, total: number, compact: boolean) {
+  if (!compact || total < 2) return undefined;
+  const isFirst = index === 0;
+  const isLast = index === total - 1;
+  if (!isFirst && !isLast) return undefined;
+
+  return {
+    top: 7,
+    bottom: 7,
+    left: isFirst ? 14 : 4,
+    right: isLast ? 14 : 4,
+  };
+}
+
+/**
  * Returns a symmetric, shallow arc for a hand of cards. The center card stays
  * upright and highest, while matching cards on both sides mirror each other.
  */

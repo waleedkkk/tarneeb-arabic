@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, type Insets, View } from "react-native";
 import { cardLabel, rankLabel, suitSymbol } from "@/lib/tarneeb/engine";
 import type { Card as CardType } from "@/lib/tarneeb/types";
 import { useEffect } from "react";
@@ -10,10 +10,11 @@ interface CardProps {
   disabled?: boolean;
   selected?: boolean;
   compact?: boolean;
+  hitSlop?: Insets;
   entranceDelay?: number;
 }
 
-export function PlayingCard({ card, onPress, disabled = false, selected = false, compact = false, entranceDelay = 0 }: CardProps) {
+export function PlayingCard({ card, onPress, disabled = false, selected = false, compact = false, hitSlop, entranceDelay = 0 }: CardProps) {
   const red = card.suit === "hearts" || card.suit === "diamonds";
   const reveal = useSharedValue(0);
   const lift = useSharedValue(selected ? -8 : 0);
@@ -46,6 +47,7 @@ export function PlayingCard({ card, onPress, disabled = false, selected = false,
       accessibilityLabel={`ورقة ${cardLabel(card)}`}
       accessibilityRole="button"
       disabled={disabled}
+      hitSlop={hitSlop}
       onPress={onPress}
       style={({ pressed }) => [styles.pressable, pressed && !disabled && styles.pressed]}
     >
