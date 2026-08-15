@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { chooseAiBid, chooseAiCard, chooseAiTrump } from "./ai";
-import { advanceTrick, createHomeState, createRound, DEFAULT_SETTINGS, playCard, selectTrump, submitBid } from "./engine";
+import { advanceTrick, createHomeState, createNetworkRound, createRound, DEFAULT_SETTINGS, playCard, selectTrump, submitBid } from "./engine";
 import { haptic } from "@/lib/haptics";
 import type { Card, GameSettings, MatchState, Seat, Suit } from "./types";
 import { loadStoredMatch, loadStoredSettings, saveStoredMatch, saveStoredSettings } from "./storage";
@@ -13,6 +13,9 @@ type Action =
   | { type: "PLAY"; playerId: Seat; cardId: string }
   | { type: "NEXT_TRICK" }
   | { type: "NEXT_ROUND" }
+  | { type: "START_NETWORK_MATCH"; playerNames: Record<Seat, string> }
+  | { type: "NEXT_NETWORK_ROUND" }
+  | { type: "NETWORK_STATE"; state: MatchState }
   | { type: "EXIT" }
   | { type: "HYDRATE"; state: MatchState };
 
@@ -30,6 +33,17 @@ function reducer(state: MatchState, action: Action): MatchState {
       return advanceTrick(state);
     case "NEXT_ROUND":
       return createRound(state);
+    case "START_NETWORK_MATCH":
+      return createNetworkRound(createHomeState(), action.playerNames, true);
+    case "NEXT_NETWORK_ROUND": {
+      const playerNames = state.players.reduce<Record<Seat, string>>((names, player) => {
+        names[player.id] = player.name;
+        return names;
+      }, {} as Record<Seat, string>);
+      return createNetworkRound(state, playerNames);
+    }
+    case "NETWORK_STATE":
+      return action.state;
     case "EXIT":
       return createHomeState();
     case "HYDRATE":
@@ -50,6 +64,13 @@ interface GameContextValue {
   nextRound: () => void;
   exitMatch: () => void;
   updateSettings: (patch: Partial<GameSettings>) => void;
+  startNetworkMatch: (playerNames: Record<Seat, string>) => void;
+  submitNetworkBid: (playerId: Seat, bid: number | null) => void;
+  selectNetworkTrump: (playerId: Seat, suit: Suit) => void;
+  playNetworkCard: (playerId: Seat, cardId: string) => void;
+  nextNetworkTrick: () => void;
+  nextNetworkRound: () => void;
+  applyNetworkState: (state: MatchState) => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -99,6 +120,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
+    const hasAiOpponent = state.players.some((player) => !player.isHuman);
+    if (!hasAiOpponent) return;
     const isAiBidTurn = state.phase === "bidding" && state.bidding.currentPlayer !== 0;
     const isAiTrumpTurn = state.phase === "trump" && state.bidding.highestBidder !== 0;
     const isAiPlayTurn = state.phase === "playing" && state.trick.plays.length > 0
@@ -163,6 +186,34 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         feedback();
         setSettings(patch);
       },
+      startNetworkMatch: (playerNames) => {
+        feedback("success");
+        sounds.playShuffle();
+        dispatch({ type: "START_NETWORK_MATCH", playerNames });
+      },
+      submitNetworkBid: (playerId, bid) => {
+        feedback();
+        dispatch({ type: "BID", playerId, bid });
+      },
+      selectNetworkTrump: (playerId, suit) => {
+        feedback();
+        dispatch({ type: "TRUMP", playerId, suit });
+      },
+      playNetworkCard: (playerId, cardId) => {
+        feedback();
+        sounds.playCard();
+        dispatch({ type: "PLAY", playerId, cardId });
+      },
+      nextNetworkTrick: () => {
+        feedback("success");
+        dispatch({ type: "NEXT_TRICK" });
+      },
+      nextNetworkRound: () => {
+        feedback("success");
+        sounds.playShuffle();
+        dispatch({ type: "NEXT_NETWORK_ROUND" });
+      },
+      applyNetworkState: (nextState) => dispatch({ type: "NETWORK_STATE", state: nextState }),
     }),
     [feedback, settings, sounds, state],
   );

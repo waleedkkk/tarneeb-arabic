@@ -30,9 +30,9 @@ export function GameTable({ state, onCardPress }: { state: MatchState; onCardPre
       </View>
 
       <View style={styles.table}>
-        <PlayerSeat name={state.players[2].name} cards={state.players[2].hand.length} position="top" active={currentSeat(state) === 2} />
-        <PlayerSeat name={state.players[3].name} cards={state.players[3].hand.length} position="left" active={currentSeat(state) === 3} />
-        <PlayerSeat name={state.players[1].name} cards={state.players[1].hand.length} position="right" active={currentSeat(state) === 1} />
+        <PlayerSeat name={state.players[2].name} cards={state.players[2].handCount} position="top" active={currentSeat(state) === 2} />
+        <PlayerSeat name={state.players[3].name} cards={state.players[3].handCount} position="left" active={currentSeat(state) === 3} />
+        <PlayerSeat name={state.players[1].name} cards={state.players[1].handCount} position="right" active={currentSeat(state) === 1} />
 
         <View style={styles.trickArea}>
           {cardBySeat[2] && <TrickCard card={cardBySeat[2]} seat={2} collectingWinner={state.phase === "trickResult" ? state.lastTrick?.winnerId ?? null : null} />}

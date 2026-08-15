@@ -9,7 +9,17 @@ export async function loadStoredMatch(): Promise<MatchState | null> {
     const raw = await AsyncStorage.getItem(MATCH_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as MatchState;
-    return parsed && typeof parsed.phase === "string" && Array.isArray(parsed.players) ? parsed : null;
+    if (!parsed || typeof parsed.phase !== "string" || !Array.isArray(parsed.players)) return null;
+    // لا يمكن استئناف غرفة شبكة بعد إغلاق التطبيق، لأن المضيف والاتصال لا يعودان صالحين.
+    if (parsed.matchMode === "localRoom") return null;
+    return {
+      ...parsed,
+      matchMode: "solo",
+      players: parsed.players.map((player) => ({
+        ...player,
+        handCount: typeof player.handCount === "number" ? player.handCount : player.hand.length,
+      })),
+    };
   } catch {
     return null;
   }

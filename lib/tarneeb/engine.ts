@@ -87,6 +87,7 @@ function dealPlayers(): Player[] {
     seat,
     team: teamOf(seat),
     hand: sortHand(deck.slice(seat * 13, seat * 13 + 13)),
+    handCount: 13,
     isHuman: seat === 0,
   }));
 }
@@ -108,6 +109,7 @@ function emptyTrick(leaderId: Seat): Trick {
 
 export function createHomeState(): MatchState {
   return {
+    matchMode: "solo",
     phase: "home",
     round: 0,
     players: [],
@@ -122,6 +124,7 @@ export function createHomeState(): MatchState {
 
 export function createRound(previous: MatchState, resetScores = false): MatchState {
   return {
+    matchMode: "solo",
     phase: "bidding",
     round: previous.round + 1,
     players: dealPlayers(),
@@ -131,6 +134,20 @@ export function createRound(previous: MatchState, resetScores = false): MatchSta
     tricksWon: { 0: 0, 1: 0 },
     scores: resetScores ? { 0: 0, 1: 0 } : previous.scores,
     roundSummary: null,
+  };
+}
+
+/** ينشئ جولة شبكة محلية مع الإبقاء على توزيع وحسم القواعد داخل المحرك نفسه. */
+export function createNetworkRound(previous: MatchState, playerNames: Record<Seat, string>, resetScores = false): MatchState {
+  const round = createRound(previous, resetScores);
+  return {
+    ...round,
+    matchMode: "localRoom",
+    players: round.players.map((player) => ({
+      ...player,
+      name: playerNames[player.id],
+      isHuman: true,
+    })),
   };
 }
 
@@ -243,7 +260,9 @@ export function playCard(state: MatchState, playerId: Seat, cardId: string): Mat
   if (!card || !legalCards(player.hand, state.trick).some((item) => item.id === card.id)) return state;
 
   const players = state.players.map((item) =>
-    item.id === playerId ? { ...item, hand: item.hand.filter((handCard) => handCard.id !== card.id) } : item,
+    item.id === playerId
+      ? { ...item, hand: item.hand.filter((handCard) => handCard.id !== card.id), handCount: Math.max(0, item.handCount - 1) }
+      : item,
   );
   const trick: Trick = {
     ...state.trick,

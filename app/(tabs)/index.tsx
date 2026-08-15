@@ -1,18 +1,24 @@
 import { FlatList, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useEffect, useState } from "react";
 import { useGame } from "@/lib/tarneeb/game-context";
+import { useLocalRoom } from "@/lib/tarneeb/local-room-context";
 import { legalCards, suitName, suitStrength, suitSymbol } from "@/lib/tarneeb/engine";
 import type { MatchState, Suit } from "@/lib/tarneeb/types";
 import { GameTable, LastTrickBanner } from "@/components/tarneeb/table";
 import { PlayingCard } from "@/components/tarneeb/card";
+import { LocalRoomSheet } from "@/components/tarneeb/local-room-sheet";
 
 const SUITS: Suit[] = ["spades", "hearts", "diamonds", "clubs"];
 
 export default function GameScreen() {
   const game = useGame();
+  const room = useLocalRoom();
   const { state } = game;
+  const [roomSheetVisible, setRoomSheetVisible] = useState(false);
+  const isNetworkMatch = state.matchMode === "localRoom";
 
-  if (state.phase === "home") return <Home onStart={game.startMatch} />;
+  if (isNetworkMatch && room.status === "error") return <ConnectionLostScreen message={room.error ?? "تعذر متابعة الغرفة المحلية."} onReturn={() => { void room.leaveRoom(); game.exitMatch(); }} />;
+  if (state.phase === "home") return <><Home onStart={game.startMatch} onLocal={() => setRoomSheetVisible(true)} /><LocalRoomSheet visible={roomSheetVisible} onClose={() => setRoomSheetVisible(false)} /></>;
   if (state.phase === "bidding") return <Bidding />;
   if (state.phase === "trump") return <TrumpSelection />;
   if (state.phase === "roundResult") return <RoundResult />;
@@ -21,14 +27,17 @@ export default function GameScreen() {
     <SafeAreaView style={styles.safe}>
       <GameTable state={state} onCardPress={(cardId) => {
         const card = state.players[0].hand.find((item) => item.id === cardId);
-        if (card && legalCards(state.players[0].hand, state.trick).some((item) => item.id === card.id)) game.playHumanCard(card);
+        if (card && legalCards(state.players[0].hand, state.trick).some((item) => item.id === card.id)) {
+          if (isNetworkMatch) room.requestCard(card.id);
+          else game.playHumanCard(card);
+        }
       }} />
-      {state.phase === "trickResult" && <TrickResultOverlay state={state} onNext={game.nextTrick} />}
+      {state.phase === "trickResult" && <TrickResultOverlay state={state} onNext={isNetworkMatch ? room.requestNextTrick : game.nextTrick} canAdvance={!isNetworkMatch || room.role === "host"} />}
     </SafeAreaView>
   );
 }
 
-function TrickResultOverlay({ state, onNext }: { state: MatchState; onNext: () => void }) {
+function TrickResultOverlay({ state, onNext, canAdvance }: { state: MatchState; onNext: () => void; canAdvance: boolean }) {
   const [ready, setReady] = useState(false);
   const trickKey = state.lastTrick ? `${state.lastTrick.winnerId}-${state.lastTrick.plays.map((play) => play.card.id).join("-")}` : null;
 
@@ -39,10 +48,10 @@ function TrickResultOverlay({ state, onNext }: { state: MatchState; onNext: () =
     return () => clearTimeout(timer);
   }, [trickKey]);
 
-  return <View style={styles.resultOverlay}><LastTrickBanner state={state} />{ready ? <PrimaryButton label="ابدأ اللمّة التالية" onPress={onNext} /> : <Text style={styles.collectionWait}>تُجمع أوراق اللمّة...</Text>}</View>;
+  return <View style={styles.resultOverlay}><LastTrickBanner state={state} />{ready && canAdvance ? <PrimaryButton label="ابدأ اللمّة التالية" onPress={onNext} /> : <Text style={styles.collectionWait}>{ready ? "بانتظار المضيف لبدء اللمّة التالية" : "تُجمع أوراق اللمّة..."}</Text>}</View>;
 }
 
-function Home({ onStart }: { onStart: () => void }) {
+function Home({ onStart, onLocal }: { onStart: () => void; onLocal: () => void }) {
   return (
     <SafeAreaView style={styles.homeSafe}>
       <View style={styles.homeAccentOne} /><View style={styles.homeAccentTwo} />
@@ -57,10 +66,15 @@ function Home({ onStart }: { onStart: () => void }) {
         </View>
         <View style={styles.homeSpacer} />
         <PrimaryButton label="ابدأ مباراة جديدة" onPress={onStart} large />
+        <Pressable onPress={onLocal} style={({ pressed }) => [styles.localMatchButton, pressed && styles.buttonPressed]}><Text style={styles.localMatchButtonText}>لعب محلي عبر الشبكة</Text><Text style={styles.localMatchButtonHint}>4 أجهزة · دون إنترنت</Text></Pressable>
         <Text style={styles.homeFootnote}>خصوم آليون بثلاثة أنماط لعب وإعدادات محفوظة على جهازك.</Text>
       </View>
     </SafeAreaView>
   );
+}
+
+function ConnectionLostScreen({ message, onReturn }: { message: string; onReturn: () => void }) {
+  return <SafeAreaView style={styles.safe}><View style={styles.centerPage}><Text style={styles.connectionKicker}>الغرفة المحلية</Text><Text style={styles.pageTitle}>انقطع الاتصال</Text><Text style={styles.connectionMessage}>{message}</Text><PrimaryButton label="العودة للرئيسية" onPress={onReturn} /></View></SafeAreaView>;
 }
 
 function Feature({ label, text }: { label: string; text: string }) {
@@ -69,6 +83,7 @@ function Feature({ label, text }: { label: string; text: string }) {
 
 function Bidding() {
   const game = useGame();
+  const room = useLocalRoom();
   const { state } = game;
   const highest = state.bidding.highestBid;
   const minBid = (highest ?? 6) + 1;
@@ -102,8 +117,8 @@ function Bidding() {
         </View>}
         <Text style={styles.sectionTitle}>{isHumanTurn ? "اختر عرضك" : "يفكر الخصوم في المزايدة…"}</Text>
         <Text style={styles.sectionText}>{isHumanTurn ? `يمكنك طلب ${minBid} أو أكثر.` : "ستظهر نتيجتهم بعد لحظات."}</Text>
-        <View style={styles.bidGrid}>{Array.from({ length: 13 - minBid + 1 }, (_, index) => minBid + index).map((bid) => <NumberButton key={bid} label={String(bid)} disabled={!isHumanTurn} onPress={() => game.submitHumanBid(bid)} />)}</View>
-        <Pressable disabled={!isHumanTurn} onPress={() => game.submitHumanBid(null)} style={({ pressed }) => [styles.secondaryButton, pressed && isHumanTurn && styles.buttonPressed, !isHumanTurn && styles.buttonDisabled]}><Text style={styles.secondaryButtonText}>مرّر</Text></Pressable>
+        <View style={styles.bidGrid}>{Array.from({ length: 13 - minBid + 1 }, (_, index) => minBid + index).map((bid) => <NumberButton key={bid} label={String(bid)} disabled={!isHumanTurn} onPress={() => state.matchMode === "localRoom" ? room.requestBid(bid) : game.submitHumanBid(bid)} />)}</View>
+        <Pressable disabled={!isHumanTurn} onPress={() => state.matchMode === "localRoom" ? room.requestBid(null) : game.submitHumanBid(null)} style={({ pressed }) => [styles.secondaryButton, pressed && isHumanTurn && styles.buttonPressed, !isHumanTurn && styles.buttonDisabled]}><Text style={styles.secondaryButtonText}>مرّر</Text></Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -111,6 +126,7 @@ function Bidding() {
 
 function TrumpSelection() {
   const game = useGame();
+  const room = useLocalRoom();
   const { state } = game;
   const humanIsBidder = state.bidding.highestBidder === 0;
   const strengths = SUITS.map((suit) => suitStrength(state.players[0].hand, suit));
@@ -121,7 +137,7 @@ function TrumpSelection() {
         <Text style={styles.pageTitle}>{humanIsBidder ? "اختر الطرنيب" : "يختار الخصم الطرنيب"}</Text>
         <Text style={styles.pageSubtitle}>{humanIsBidder ? "حدد النوع الذي يمنح فريقك أفضل فرصة للفوز باللمم." : `${state.players[state.bidding.highestBidder!].name} يراجع أوراقه…`}</Text>
         {humanIsBidder && game.settings.showStrengthIndicator && <View style={styles.trumpStrengthPanel}><View style={styles.strengthTitleRow}><Text style={styles.trumpStrengthTitle}>مؤشر قوة أوراقك</Text><StrengthInfoButton /></View><View style={styles.strengthGrid}>{strengths.map((strength) => <SuitStrengthCard key={strength.suit} {...strength} />)}</View></View>}
-        <View style={styles.suitGrid}>{SUITS.map((suit) => <Pressable key={suit} disabled={!humanIsBidder} onPress={() => game.selectHumanTrump(suit)} style={({ pressed }) => [styles.suitButton, pressed && humanIsBidder && styles.buttonPressed, !humanIsBidder && styles.buttonDisabled]}><Text style={[styles.suitSymbol, (suit === "hearts" || suit === "diamonds") && styles.suitRed]}>{suitSymbol(suit)}</Text><Text style={styles.suitName}>{suitName(suit)}</Text></Pressable>)}</View>
+        <View style={styles.suitGrid}>{SUITS.map((suit) => <Pressable key={suit} disabled={!humanIsBidder} onPress={() => state.matchMode === "localRoom" ? room.requestTrump(suit) : game.selectHumanTrump(suit)} style={({ pressed }) => [styles.suitButton, pressed && humanIsBidder && styles.buttonPressed, !humanIsBidder && styles.buttonDisabled]}><Text style={[styles.suitSymbol, (suit === "hearts" || suit === "diamonds") && styles.suitRed]}>{suitSymbol(suit)}</Text><Text style={styles.suitName}>{suitName(suit)}</Text></Pressable>)}</View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -129,6 +145,7 @@ function TrumpSelection() {
 
 function RoundResult() {
   const game = useGame();
+  const room = useLocalRoom();
   const { state } = game;
   const summary = state.roundSummary!;
   const matchWinner = state.scores[0] >= game.settings.targetScore ? "فريقك" : state.scores[1] >= game.settings.targetScore ? "الفريق المنافس" : null;
@@ -139,8 +156,8 @@ function RoundResult() {
         <Text style={styles.pageTitle}>{matchWinner ? `فاز ${matchWinner} بالمباراة` : summary.madeContract ? "تم تحقيق الطلب" : "لم يتحقق الطلب"}</Text>
         <Text style={styles.pageSubtitle}>كان الطلب {summary.bid}، وحصل فريقك على {summary.roundTricks[0]} لمم مقابل {summary.roundTricks[1]} للخصم.</Text>
         <View style={styles.finalScore}><ScoreBlock label="فريقك" score={state.scores[0]} change={summary.scoreChange[0]} /><View style={styles.scoreDivider} /><ScoreBlock label="الخصم" score={state.scores[1]} change={summary.scoreChange[1]} /></View>
-        {matchWinner ? <PrimaryButton label="ابدأ مباراة جديدة" onPress={game.startMatch} /> : <PrimaryButton label="الجولة التالية" onPress={game.nextRound} />}
-        <Pressable onPress={game.exitMatch} style={({ pressed }) => [styles.exitButton, pressed && styles.buttonPressed]}><Text style={styles.exitText}>العودة للرئيسية</Text></Pressable>
+        {state.matchMode === "localRoom" && room.role !== "host" ? <Text style={styles.collectionWait}>بانتظار المضيف للمتابعة</Text> : matchWinner ? <PrimaryButton label="ابدأ مباراة جديدة" onPress={state.matchMode === "localRoom" ? room.startRoomMatch : game.startMatch} /> : <PrimaryButton label="الجولة التالية" onPress={state.matchMode === "localRoom" ? room.requestNextRound : game.nextRound} />}
+        <Pressable onPress={() => { if (state.matchMode === "localRoom") void room.leaveRoom(); game.exitMatch(); }} style={({ pressed }) => [styles.exitButton, pressed && styles.buttonPressed]}><Text style={styles.exitText}>العودة للرئيسية</Text></Pressable>
       </View>
     </SafeAreaView>
   );
@@ -285,4 +302,9 @@ const styles = StyleSheet.create({
   exitText: { color: "#B4D6C7", fontSize: 14, writingDirection: "rtl" },
   resultOverlay: { position: "absolute", left: 0, right: 0, bottom: 2, alignItems: "center" },
   collectionWait: { color: "#D9EEE4", fontSize: 13, fontWeight: "800", marginBottom: 18, writingDirection: "rtl" },
+  localMatchButton: { width: "100%", marginTop: 12, minHeight: 58, borderRadius: 17, borderWidth: 1, borderColor: "rgba(227,179,65,0.8)", backgroundColor: "rgba(255,248,231,0.08)", alignItems: "center", justifyContent: "center" },
+  localMatchButtonText: { color: "#F5D889", fontSize: 16, fontWeight: "900", writingDirection: "rtl" },
+  localMatchButtonHint: { color: "#B4D6C7", fontSize: 11, marginTop: 3, writingDirection: "rtl" },
+  connectionKicker: { color: "#E3B341", fontSize: 14, fontWeight: "800", writingDirection: "rtl" },
+  connectionMessage: { color: "#B4D6C7", fontSize: 15, lineHeight: 23, textAlign: "center", marginTop: 10, marginBottom: 30, writingDirection: "rtl", maxWidth: 280 },
 });

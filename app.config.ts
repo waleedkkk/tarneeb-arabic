@@ -51,8 +51,10 @@ const config: ExpoConfig = {
     supportsTablet: true,
     bundleIdentifier: env.iosBundleId,
     "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
+      "ITSAppUsesNonExemptEncryption": false,
+      "NSLocalNetworkUsageDescription": "يحتاج طرنيب إلى الشبكة المحلية لإنشاء غرفة لعب والانضمام إليها دون إنترنت.",
+      "NSBonjourServices": ["_tarneeb._tcp"],
+    }
   },
   android: {
     adaptiveIcon: {
@@ -64,7 +66,7 @@ const config: ExpoConfig = {
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     package: env.androidPackage,
-    permissions: ["POST_NOTIFICATIONS"],
+    permissions: ["POST_NOTIFICATIONS", "CAMERA", "INTERNET", "ACCESS_NETWORK_STATE", "ACCESS_WIFI_STATE", "CHANGE_WIFI_MULTICAST_STATE"],
     intentFilters: [
       {
         action: "VIEW",
@@ -90,6 +92,12 @@ const config: ExpoConfig = {
       "expo-audio",
       {
         microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone.",
+      },
+    ],
+    [
+      "expo-camera",
+      {
+        cameraPermission: "اسمح لـ $(PRODUCT_NAME) باستخدام الكاميرا لمسح رمز غرفة اللعب المحلية.",
       },
     ],
     [

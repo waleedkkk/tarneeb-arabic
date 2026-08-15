@@ -4,6 +4,7 @@ export type Rank = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
 export type Seat = 0 | 1 | 2 | 3;
 export type Team = 0 | 1;
 export type GamePhase = "home" | "bidding" | "trump" | "playing" | "trickResult" | "roundResult";
+export type MatchMode = "solo" | "localRoom";
 
 export interface Card {
   id: string;
@@ -17,6 +18,8 @@ export interface Player {
   seat: Seat;
   team: Team;
   hand: Card[];
+  /** عدد الأوراق الفعلي؛ يبقى ظاهرًا للخصوم حتى عندما لا تُرسل أوراقهم الخاصة عبر الشبكة. */
+  handCount: number;
   isHuman: boolean;
 }
 
@@ -61,6 +64,7 @@ export interface GameSettings {
 }
 
 export interface MatchState {
+  matchMode: MatchMode;
   phase: GamePhase;
   round: number;
   players: Player[];
