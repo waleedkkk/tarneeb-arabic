@@ -1,9 +1,10 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { chooseAiBid, chooseAiCard, chooseAiTrump } from "./ai";
 import { advanceTrick, createHomeState, createRound, DEFAULT_SETTINGS, playCard, selectTrump, submitBid } from "./engine";
 import { haptic } from "@/lib/haptics";
 import type { Card, GameSettings, MatchState, Seat, Suit } from "./types";
 import { loadStoredMatch, loadStoredSettings, saveStoredMatch, saveStoredSettings } from "./storage";
+import { useGameSounds } from "./use-game-sounds";
 
 type Action =
   | { type: "START_MATCH" }
@@ -60,6 +61,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     DEFAULT_SETTINGS,
   );
   const [hydrated, setHydrated] = useState(false);
+  const sounds = useGameSounds(settings.soundEnabled);
+  const previousTrick = useRef<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -79,6 +82,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (hydrated) saveStoredSettings(settings);
   }, [hydrated, settings]);
+
+  useEffect(() => {
+    const signature = state.lastTrick
+      ? `${state.lastTrick.winnerId}-${state.lastTrick.plays.map((play) => play.card.id).join("-")}`
+      : null;
+    if (signature && signature !== previousTrick.current) sounds.playTrick();
+    previousTrick.current = signature;
+  }, [sounds, state.lastTrick]);
 
   const feedback = useCallback(
     (kind: "light" | "success" | "error" = "light") => {
@@ -109,11 +120,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         const lastPlayer = state.trick.plays.length > 0 ? state.trick.plays.at(-1)!.playerId : state.trick.leaderId;
         const playerId = ((lastPlayer + (state.trick.plays.length > 0 ? 1 : 0)) % 4) as 1 | 2 | 3;
         const card = chooseAiCard(state, playerId);
+        sounds.playCard();
         dispatch({ type: "PLAY", playerId, cardId: card.id });
       }
     }, isAiPlayTurn ? 650 : 800);
     return () => clearTimeout(timeout);
-  }, [settings.aiLevel, state]);
+  }, [settings.aiLevel, sounds, state]);
 
   const value = useMemo<GameContextValue>(
     () => ({
@@ -121,6 +133,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       settings,
       startMatch: () => {
         feedback();
+        sounds.playShuffle();
         dispatch({ type: "START_MATCH" });
       },
       submitHumanBid: (bid) => {
@@ -133,6 +146,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       },
       playHumanCard: (card) => {
         feedback();
+        sounds.playCard();
         dispatch({ type: "PLAY", playerId: 0, cardId: card.id });
       },
       nextTrick: () => {
@@ -141,6 +155,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       },
       nextRound: () => {
         feedback("success");
+        sounds.playShuffle();
         dispatch({ type: "NEXT_ROUND" });
       },
       exitMatch: () => dispatch({ type: "EXIT" }),
@@ -149,7 +164,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         setSettings(patch);
       },
     }),
-    [feedback, settings, state],
+    [feedback, settings, sounds, state],
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

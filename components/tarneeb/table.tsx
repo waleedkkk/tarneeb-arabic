@@ -2,6 +2,8 @@ import { FlatList, StyleSheet, Text, View } from "react-native";
 import { PlayingCard, CardBack } from "./card";
 import { cardLabel, legalCards, suitName, suitSymbol } from "@/lib/tarneeb/engine";
 import type { MatchState } from "@/lib/tarneeb/types";
+import { useEffect } from "react";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 export function GameTable({ state, onCardPress }: { state: MatchState; onCardPress: (cardId: string) => void }) {
   const humanTurn = state.phase === "playing" && (state.trick.plays.length === 0 ? state.trick.leaderId === 0 : (state.trick.plays.at(-1)?.playerId ?? 3) === 3);
@@ -39,7 +41,7 @@ export function GameTable({ state, onCardPress }: { state: MatchState; onCardPre
           keyExtractor={(card) => card.id}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.handList}
-          renderItem={({ item }) => <PlayingCard card={item} disabled={!humanTurn || !playable.includes(item.id)} onPress={() => onCardPress(item.id)} />}
+          renderItem={({ item, index }) => <PlayingCard card={item} entranceDelay={index * 26} disabled={!humanTurn || !playable.includes(item.id)} onPress={() => onCardPress(item.id)} />}
         />
       </View>
     </View>
@@ -61,13 +63,31 @@ function PlayerSeat({ name, cards, position, active }: { name: string; cards: nu
 }
 
 export function LastTrickBanner({ state }: { state: MatchState }) {
+  const progress = useSharedValue(0);
+  const trickKey = state.lastTrick
+    ? `${state.lastTrick.winnerId}-${state.lastTrick.plays.map((play) => play.card.id).join("-")}`
+    : null;
+
+  useEffect(() => {
+    if (!trickKey) {
+      progress.value = 0;
+      return;
+    }
+    progress.value = 0;
+    progress.value = withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) });
+  }, [progress, trickKey]);
+
+  const revealStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ translateY: (1 - progress.value) * 12 }, { scale: 0.94 + progress.value * 0.06 }],
+  }));
   if (!state.lastTrick) return null;
   const winner = state.players[state.lastTrick.winnerId];
   return (
-    <View style={styles.lastTrick}>
+    <Animated.View style={[styles.lastTrick, revealStyle]}>
       <Text style={styles.lastTrickTitle}>فاز {winner.team === 0 ? "فريقك" : "الفريق المنافس"} باللمّة</Text>
       <Text style={styles.lastTrickDetail}>{winner.name} حسمها بـ {cardLabel(state.lastTrick.plays.find((play) => play.playerId === winner.id)!.card)}</Text>
-    </View>
+    </Animated.View>
   );
 }
 
