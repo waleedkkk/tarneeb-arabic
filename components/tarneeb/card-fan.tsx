@@ -1,12 +1,8 @@
 import { StyleSheet, useWindowDimensions, View } from "react-native";
 
 import { PlayingCard } from "./card";
-import { getEqualFanCardPosition } from "@/lib/tarneeb/card-fan-layout";
+import { getEqualFanCardPosition, getResponsiveFanMetrics } from "@/lib/tarneeb/card-fan-layout";
 import type { Card } from "@/lib/tarneeb/types";
-
-const MAX_FAN_WIDTH = 340;
-const MIN_FAN_WIDTH = 270;
-const HORIZONTAL_INSET = 44;
 
 interface CurvedCardHandProps {
   cards: Card[];
@@ -25,12 +21,21 @@ export function CurvedCardHand({
   onCardPress,
 }: CurvedCardHandProps) {
   const { width } = useWindowDimensions();
-  const fanWidth = Math.min(Math.max(width - HORIZONTAL_INSET, MIN_FAN_WIDTH), MAX_FAN_WIDTH);
+  const metrics = getResponsiveFanMetrics(width);
 
   return (
-    <View accessibilityLabel={accessibilityLabel} style={[styles.fan, { width: fanWidth }]}>
+    <View
+      accessibilityLabel={accessibilityLabel}
+      style={[styles.fan, { width: metrics.fanWidth, height: metrics.fanHeight }]}
+    >
       {cards.map((card, index) => {
-        const position = getEqualFanCardPosition(index, cards.length, fanWidth);
+        const position = getEqualFanCardPosition(
+          index,
+          cards.length,
+          metrics.fanWidth,
+          metrics.cardFootprint,
+          metrics.compact,
+        );
         const disabled = disabledCardIds.includes(card.id);
         return (
           <View
@@ -47,6 +52,7 @@ export function CurvedCardHand({
           >
             <PlayingCard
               card={card}
+              compact={metrics.compact}
               entranceDelay={index * entranceStep}
               disabled={disabled}
               onPress={onCardPress ? () => onCardPress(card.id) : undefined}
@@ -59,6 +65,6 @@ export function CurvedCardHand({
 }
 
 const styles = StyleSheet.create({
-  fan: { height: 112, position: "relative", alignSelf: "center" },
+  fan: { position: "relative", alignSelf: "center" },
   cardSlot: { position: "absolute" },
 });
