@@ -29,9 +29,9 @@ export function GameTable({ state, onCardPress }: { state: MatchState; onCardPre
         <PlayerSeat name={state.players[1].name} cards={state.players[1].hand.length} position="right" active={currentSeat(state) === 1} />
 
         <View style={styles.trickArea}>
-          <View style={[styles.playSlot, styles.playTop]}>{cardBySeat[2] && <PlayingCard card={cardBySeat[2]} compact />}</View>
-          <View style={[styles.playSlot, styles.playLeft]}>{cardBySeat[3] && <PlayingCard card={cardBySeat[3]} compact />}</View>
-          <View style={[styles.playSlot, styles.playRight]}>{cardBySeat[1] && <PlayingCard card={cardBySeat[1]} compact />}</View>
+          <View style={[styles.playSlot, styles.playTop, styles.playTopRotated]}>{cardBySeat[2] && <PlayingCard card={cardBySeat[2]} compact />}</View>
+          <View style={[styles.playSlot, styles.playLeft, styles.playLeftRotated]}>{cardBySeat[3] && <PlayingCard card={cardBySeat[3]} compact />}</View>
+          <View style={[styles.playSlot, styles.playRight, styles.playRightRotated]}>{cardBySeat[1] && <PlayingCard card={cardBySeat[1]} compact />}</View>
           <View style={[styles.playSlot, styles.playBottom]}>{cardBySeat[0] && <PlayingCard card={cardBySeat[0]} compact />}</View>
           {state.trick.plays.length === 0 && <Text style={styles.tableHint}>{humanTurn ? "اختر ورقة للعب" : "ينتظر اللاعبون"}</Text>}
         </View>
@@ -141,6 +141,9 @@ const styles = StyleSheet.create({
   playBottom: { bottom: 8, alignSelf: "center" },
   playLeft: { left: 8, top: 68 },
   playRight: { right: 8, top: 68 },
+  playTopRotated: { transform: [{ rotate: "180deg" }] },
+  playLeftRotated: { transform: [{ rotate: "-90deg" }] },
+  playRightRotated: { transform: [{ rotate: "90deg" }] },
   tableHint: { alignSelf: "center", marginTop: 92, color: "#D9EEE4", fontSize: 13, writingDirection: "rtl" },
   handArea: { height: 140, marginTop: 10, paddingBottom: 8, alignItems: "center" },
   handHeader: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 4, marginBottom: 6 },
