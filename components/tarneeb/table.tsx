@@ -29,10 +29,10 @@ export function GameTable({ state, onCardPress }: { state: MatchState; onCardPre
         <PlayerSeat name={state.players[1].name} cards={state.players[1].hand.length} position="right" active={currentSeat(state) === 1} />
 
         <View style={styles.trickArea}>
-          <View style={[styles.playSlot, styles.playTop, styles.playTopRotated]}>{cardBySeat[2] && <PlayingCard card={cardBySeat[2]} compact />}</View>
-          <View style={[styles.playSlot, styles.playLeft, styles.playLeftRotated]}>{cardBySeat[3] && <PlayingCard card={cardBySeat[3]} compact />}</View>
-          <View style={[styles.playSlot, styles.playRight, styles.playRightRotated]}>{cardBySeat[1] && <PlayingCard card={cardBySeat[1]} compact />}</View>
-          <View style={[styles.playSlot, styles.playBottom]}>{cardBySeat[0] && <PlayingCard card={cardBySeat[0]} compact />}</View>
+          {cardBySeat[2] && <TrickCard card={cardBySeat[2]} seat={2} />}
+          {cardBySeat[3] && <TrickCard card={cardBySeat[3]} seat={3} />}
+          {cardBySeat[1] && <TrickCard card={cardBySeat[1]} seat={1} />}
+          {cardBySeat[0] && <TrickCard card={cardBySeat[0]} seat={0} />}
           {state.trick.plays.length === 0 && <Text style={styles.tableHint}>{humanTurn ? "اختر ورقة للعب" : "ينتظر اللاعبون"}</Text>}
         </View>
       </View>
@@ -46,6 +46,35 @@ export function GameTable({ state, onCardPress }: { state: MatchState; onCardPre
     </View>
   );
 }
+
+function TrickCard({ card, seat }: { card: MatchState["trick"]["plays"][number]["card"]; seat: 0 | 1 | 2 | 3 }) {
+  const progress = useSharedValue(0);
+  const travel = TRICK_TRAVEL[seat];
+
+  useEffect(() => {
+    progress.value = 0;
+    progress.value = withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) });
+  }, [card.id, progress]);
+
+  const travelStyle = useAnimatedStyle(() => ({
+    opacity: 0.28 + progress.value * 0.72,
+    transform: [
+      { translateX: (1 - progress.value) * travel.x },
+      { translateY: (1 - progress.value) * travel.y },
+      { scale: 0.78 + progress.value * 0.22 },
+      { rotate: travel.rotation },
+    ],
+  }));
+
+  return <Animated.View style={[styles.playSlot, styles[travel.slot], travelStyle]}><PlayingCard card={card} compact /></Animated.View>;
+}
+
+const TRICK_TRAVEL = {
+  0: { x: 0, y: 112, rotation: "0deg", slot: "playBottom" },
+  1: { x: 108, y: 0, rotation: "90deg", slot: "playRight" },
+  2: { x: 0, y: -112, rotation: "180deg", slot: "playTop" },
+  3: { x: -108, y: 0, rotation: "-90deg", slot: "playLeft" },
+} as const;
 
 function currentSeat(state: MatchState) {
   if (state.phase !== "playing") return null;
@@ -141,9 +170,6 @@ const styles = StyleSheet.create({
   playBottom: { bottom: 8, alignSelf: "center" },
   playLeft: { left: 8, top: 68 },
   playRight: { right: 8, top: 68 },
-  playTopRotated: { transform: [{ rotate: "180deg" }] },
-  playLeftRotated: { transform: [{ rotate: "-90deg" }] },
-  playRightRotated: { transform: [{ rotate: "90deg" }] },
   tableHint: { alignSelf: "center", marginTop: 92, color: "#D9EEE4", fontSize: 13, writingDirection: "rtl" },
   handArea: { height: 140, marginTop: 10, paddingBottom: 8, alignItems: "center" },
   handHeader: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 4, marginBottom: 6 },
