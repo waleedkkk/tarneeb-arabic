@@ -3,7 +3,7 @@ import { PlayingCard, CardBack } from "./card";
 import { cardLabel, legalCards, suitName, suitSymbol } from "@/lib/tarneeb/engine";
 import type { MatchState } from "@/lib/tarneeb/types";
 import { useEffect } from "react";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 
 export function GameTable({ state, onCardPress }: { state: MatchState; onCardPress: (cardId: string) => void }) {
   const { width } = useWindowDimensions();
@@ -29,10 +29,10 @@ export function GameTable({ state, onCardPress }: { state: MatchState; onCardPre
         <PlayerSeat name={state.players[1].name} cards={state.players[1].hand.length} position="right" active={currentSeat(state) === 1} />
 
         <View style={styles.trickArea}>
-          {cardBySeat[2] && <TrickCard card={cardBySeat[2]} seat={2} />}
-          {cardBySeat[3] && <TrickCard card={cardBySeat[3]} seat={3} />}
-          {cardBySeat[1] && <TrickCard card={cardBySeat[1]} seat={1} />}
-          {cardBySeat[0] && <TrickCard card={cardBySeat[0]} seat={0} />}
+          {cardBySeat[2] && <TrickCard card={cardBySeat[2]} seat={2} collectingWinner={state.phase === "trickResult" ? state.lastTrick?.winnerId ?? null : null} />}
+          {cardBySeat[3] && <TrickCard card={cardBySeat[3]} seat={3} collectingWinner={state.phase === "trickResult" ? state.lastTrick?.winnerId ?? null : null} />}
+          {cardBySeat[1] && <TrickCard card={cardBySeat[1]} seat={1} collectingWinner={state.phase === "trickResult" ? state.lastTrick?.winnerId ?? null : null} />}
+          {cardBySeat[0] && <TrickCard card={cardBySeat[0]} seat={0} collectingWinner={state.phase === "trickResult" ? state.lastTrick?.winnerId ?? null : null} />}
           {state.trick.plays.length === 0 && <Text style={styles.tableHint}>{humanTurn ? "اختر ورقة للعب" : "ينتظر اللاعبون"}</Text>}
         </View>
       </View>
@@ -47,8 +47,10 @@ export function GameTable({ state, onCardPress }: { state: MatchState; onCardPre
   );
 }
 
-function TrickCard({ card, seat }: { card: MatchState["trick"]["plays"][number]["card"]; seat: 0 | 1 | 2 | 3 }) {
+function TrickCard({ card, seat, collectingWinner }: { card: MatchState["trick"]["plays"][number]["card"]; seat: 0 | 1 | 2 | 3; collectingWinner: 0 | 1 | 2 | 3 | null }) {
   const progress = useSharedValue(0);
+  const gather = useSharedValue(0);
+  const sweep = useSharedValue(0);
   const travel = TRICK_TRAVEL[seat];
 
   useEffect(() => {
@@ -56,12 +58,22 @@ function TrickCard({ card, seat }: { card: MatchState["trick"]["plays"][number][
     progress.value = withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) });
   }, [card.id, progress]);
 
+  useEffect(() => {
+    gather.value = 0;
+    sweep.value = 0;
+    if (collectingWinner === null) return;
+    gather.value = withDelay(360, withTiming(1, { duration: 170, easing: Easing.inOut(Easing.cubic) }));
+    sweep.value = withDelay(610, withTiming(1, { duration: 280, easing: Easing.in(Easing.cubic) }));
+  }, [collectingWinner, gather, sweep]);
+
   const travelStyle = useAnimatedStyle(() => ({
-    opacity: 0.28 + progress.value * 0.72,
+    opacity: (0.28 + progress.value * 0.72) * (1 - sweep.value),
     transform: [
       { translateX: (1 - progress.value) * travel.x },
       { translateY: (1 - progress.value) * travel.y },
-      { scale: 0.78 + progress.value * 0.22 },
+      { translateX: gather.value * GATHER_TO_CENTER[seat].x + (collectingWinner === null ? 0 : sweep.value * SWEEP_TO_WINNER[collectingWinner].x) },
+      { translateY: gather.value * GATHER_TO_CENTER[seat].y + (collectingWinner === null ? 0 : sweep.value * SWEEP_TO_WINNER[collectingWinner].y) },
+      { scale: (0.78 + progress.value * 0.22) * (1 - sweep.value * 0.18) },
       { rotate: travel.rotation },
     ],
   }));
@@ -74,6 +86,20 @@ const TRICK_TRAVEL = {
   1: { x: 108, y: 0, rotation: "90deg", slot: "playRight" },
   2: { x: 0, y: -112, rotation: "180deg", slot: "playTop" },
   3: { x: -108, y: 0, rotation: "-90deg", slot: "playLeft" },
+} as const;
+
+const GATHER_TO_CENTER = {
+  0: { x: 0, y: -54 },
+  1: { x: -48, y: 0 },
+  2: { x: 0, y: 54 },
+  3: { x: 48, y: 0 },
+} as const;
+
+const SWEEP_TO_WINNER = {
+  0: { x: 0, y: 112 },
+  1: { x: 108, y: 0 },
+  2: { x: 0, y: -112 },
+  3: { x: -108, y: 0 },
 } as const;
 
 function currentSeat(state: MatchState) {

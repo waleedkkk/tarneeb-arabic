@@ -1,8 +1,8 @@
 import { FlatList, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useGame } from "@/lib/tarneeb/game-context";
 import { legalCards, suitName, suitStrength, suitSymbol } from "@/lib/tarneeb/engine";
-import type { Suit } from "@/lib/tarneeb/types";
+import type { MatchState, Suit } from "@/lib/tarneeb/types";
 import { GameTable, LastTrickBanner } from "@/components/tarneeb/table";
 import { PlayingCard } from "@/components/tarneeb/card";
 
@@ -23,9 +23,23 @@ export default function GameScreen() {
         const card = state.players[0].hand.find((item) => item.id === cardId);
         if (card && legalCards(state.players[0].hand, state.trick).some((item) => item.id === card.id)) game.playHumanCard(card);
       }} />
-      {state.phase === "trickResult" && <View style={styles.resultOverlay}><LastTrickBanner state={state} /><PrimaryButton label="ابدأ اللمّة التالية" onPress={game.nextTrick} /></View>}
+      {state.phase === "trickResult" && <TrickResultOverlay state={state} onNext={game.nextTrick} />}
     </SafeAreaView>
   );
+}
+
+function TrickResultOverlay({ state, onNext }: { state: MatchState; onNext: () => void }) {
+  const [ready, setReady] = useState(false);
+  const trickKey = state.lastTrick ? `${state.lastTrick.winnerId}-${state.lastTrick.plays.map((play) => play.card.id).join("-")}` : null;
+
+  useEffect(() => {
+    setReady(false);
+    if (!trickKey) return;
+    const timer = setTimeout(() => setReady(true), 930);
+    return () => clearTimeout(timer);
+  }, [trickKey]);
+
+  return <View style={styles.resultOverlay}><LastTrickBanner state={state} />{ready ? <PrimaryButton label="ابدأ اللمّة التالية" onPress={onNext} /> : <Text style={styles.collectionWait}>تُجمع أوراق اللمّة...</Text>}</View>;
 }
 
 function Home({ onStart }: { onStart: () => void }) {
@@ -270,4 +284,5 @@ const styles = StyleSheet.create({
   exitButton: { padding: 12, marginTop: 12 },
   exitText: { color: "#B4D6C7", fontSize: 14, writingDirection: "rtl" },
   resultOverlay: { position: "absolute", left: 0, right: 0, bottom: 2, alignItems: "center" },
+  collectionWait: { color: "#D9EEE4", fontSize: 13, fontWeight: "800", marginBottom: 18, writingDirection: "rtl" },
 });
