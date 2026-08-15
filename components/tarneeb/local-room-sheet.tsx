@@ -202,13 +202,13 @@ function Back({ onPress, label = "عودة" }: { onPress: () => void; label?: st
 function Action({ label, hint, onPress, disabled, primary = false, loading = false }: { label: string; hint: string; onPress: () => void; disabled?: boolean; primary?: boolean; loading?: boolean }) { return <Pressable disabled={disabled || loading} onPress={onPress} style={({ pressed }) => [styles.action, primary && styles.actionPrimary, (disabled || loading) && styles.actionDisabled, pressed && !disabled && !loading && styles.pressed]}><View><Text style={[styles.actionLabel, primary && styles.actionLabelPrimary]}>{label}</Text>{hint ? <Text style={[styles.actionHint, primary && styles.actionHintPrimary]}>{hint}</Text> : null}</View>{loading ? <ActivityIndicator color={primary ? "#173C2F" : "#0E3B2E"} /> : <Text style={[styles.actionArrow, primary && styles.actionArrowPrimary]}>‹</Text>}</Pressable>; }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#0E3B2E" },
+  page: { flex: 1, backgroundColor: "#0E3B2E", direction: "ltr" },
   header: { paddingHorizontal: 22, paddingTop: 28, paddingBottom: 16, flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "flex-start", borderBottomWidth: 1, borderColor: "rgba(255,248,231,0.15)" },
   title: { color: "#FFF8E7", fontSize: 23, fontWeight: "900", writingDirection: "rtl" },
   subtitle: { color: "#B4D6C7", marginTop: 5, fontSize: 12, writingDirection: "rtl" },
   close: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.12)", alignItems: "center", justifyContent: "center" },
   closeText: { color: "#FFF8E7", fontSize: 25, lineHeight: 29 },
-  content: { padding: 22, gap: 12, flexGrow: 1 },
+  content: { padding: 22, paddingBottom: 28, gap: 12 },
   hero: { backgroundColor: "#16624A", borderRadius: 24, padding: 22, alignItems: "center", borderWidth: 1, borderColor: "rgba(227,179,65,0.32)", marginBottom: 4 },
   heroIcon: { color: "#E3B341", fontSize: 42, lineHeight: 46 },
   heroTitle: { color: "#FFF8E7", fontWeight: "900", fontSize: 20, marginTop: 5, writingDirection: "rtl" },
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   actionLabel: { color: "#0E3B2E", fontSize: 17, fontWeight: "900", writingDirection: "rtl" }, actionLabelPrimary: { color: "#173C2F" },
   actionHint: { color: "#52635C", fontSize: 12, marginTop: 3, writingDirection: "rtl" }, actionHintPrimary: { color: "#315241" },
   actionArrow: { color: "#0E3B2E", fontSize: 32, lineHeight: 33 }, actionArrowPrimary: { color: "#173C2F" },
-  note: { marginTop: "auto", padding: 16, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.07)" }, noteTitle: { color: "#F5D889", fontSize: 13, fontWeight: "900", writingDirection: "rtl" }, noteText: { color: "#D9EEE4", marginTop: 5, lineHeight: 19, fontSize: 12, writingDirection: "rtl" },
+  note: { marginTop: 8, padding: 16, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.07)" }, noteTitle: { color: "#F5D889", fontSize: 13, fontWeight: "900", writingDirection: "rtl" }, noteText: { color: "#D9EEE4", marginTop: 5, lineHeight: 19, fontSize: 12, writingDirection: "rtl" },
   stepTitle: { marginBottom: 8, alignItems: "flex-end" }, stepTitleText: { color: "#FFF8E7", fontSize: 21, fontWeight: "900", writingDirection: "rtl" }, stepText: { color: "#B4D6C7", textAlign: "right", lineHeight: 20, marginTop: 4, writingDirection: "rtl" }, label: { color: "#D9EEE4", fontWeight: "800", writingDirection: "rtl", textAlign: "right", marginTop: 2 },
   input: { backgroundColor: "#FFF8E7", color: "#173C2F", minHeight: 54, borderRadius: 14, paddingHorizontal: 15, fontSize: 16 }, codeInput: { minHeight: 90, paddingTop: 12, textAlignVertical: "top", writingDirection: "ltr", fontSize: 12 },
   back: { alignItems: "center", paddingVertical: 12 }, backText: { color: "#D9EEE4", fontWeight: "800", writingDirection: "rtl" },

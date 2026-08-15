@@ -184,9 +184,9 @@ function SuitStrengthCard({ suit, count, highCount, bars, label }: ReturnType<ty
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#0E3B2E" },
-  homeSafe: { flex: 1, backgroundColor: "#0E3B2E", overflow: "hidden" },
-  homeContent: { flex: 1, paddingHorizontal: 24, paddingTop: 48, paddingBottom: 28, alignItems: "center" },
+  safe: { flex: 1, backgroundColor: "#0E3B2E", direction: "ltr" },
+  homeSafe: { flex: 1, backgroundColor: "#0E3B2E", overflow: "hidden", direction: "ltr" },
+  homeContent: { flex: 1, paddingHorizontal: 24, paddingTop: 30, paddingBottom: 18, alignItems: "center" },
   homeAccentOne: { position: "absolute", width: 300, height: 300, borderRadius: 150, backgroundColor: "#16624A", right: -120, top: -120 },
   homeAccentTwo: { position: "absolute", width: 230, height: 230, borderRadius: 115, borderWidth: 1, borderColor: "rgba(227,179,65,0.35)", left: -90, bottom: 70 },
   logoMark: { width: 88, height: 88, borderRadius: 28, backgroundColor: "#E3B341", alignItems: "center", justifyContent: "center", borderWidth: 5, borderColor: "#FFF8E7", shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 12, elevation: 8 },
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   feature: { width: 95, minHeight: 73, borderRadius: 16, padding: 10, backgroundColor: "rgba(255,248,231,0.09)", borderWidth: 1, borderColor: "rgba(255,248,231,0.16)", alignItems: "center", justifyContent: "center" },
   featureLabel: { color: "#F5D889", fontSize: 14, fontWeight: "800", writingDirection: "rtl" },
   featureText: { color: "#D9EEE4", fontSize: 11, marginTop: 4, textAlign: "center", writingDirection: "rtl" },
-  homeSpacer: { flex: 1 },
+  homeSpacer: { height: 42 },
   homeFootnote: { color: "#B4D6C7", fontSize: 12, textAlign: "center", lineHeight: 18, marginTop: 14, writingDirection: "rtl" },
   primaryButton: { minWidth: 240, minHeight: 52, paddingHorizontal: 18, borderRadius: 16, backgroundColor: "#E3B341", alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 5, elevation: 3 },
   primaryButtonLarge: { alignSelf: "stretch" },

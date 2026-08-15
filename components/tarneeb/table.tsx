@@ -159,10 +159,10 @@ export function LastTrickBanner({ state }: { state: MatchState }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#0E3B2E", paddingHorizontal: 14 },
+  screen: { flex: 1, backgroundColor: "#0E3B2E", paddingHorizontal: 14, direction: "ltr" },
   statusRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: 8, gap: 8 },
   scorePill: { minWidth: 66, alignItems: "center", backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6 },
-  teamHeading: { flexDirection: "row", alignItems: "center", gap: 5 },
+  teamHeading: { flexDirection: "row-reverse", alignItems: "center", gap: 5 },
   scoreLabel: { color: "#D9EEE4", fontSize: 11, writingDirection: "rtl" },
   scoreValue: { color: "#FFF8E7", fontSize: 20, fontWeight: "800", lineHeight: 24 },
   trickBadge: { flexDirection: "row", alignItems: "baseline", gap: 2, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 9, backgroundColor: "#E3B341" },
