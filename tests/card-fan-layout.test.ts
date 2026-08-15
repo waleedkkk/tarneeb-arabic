@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { getFanEdgeHitSlop, getResponsiveFanMetrics, getRtlSlopeFanCardPosition } from "../lib/tarneeb/card-fan-layout";
 
 describe("RTL sloped card hand layout", () => {
-  it("keeps the center card upright within the descending hand", () => {
+  it("keeps the center card upright within the curved descending hand", () => {
     const center = getRtlSlopeFanCardPosition(3, 7, 340);
     const left = getRtlSlopeFanCardPosition(0, 7, 340);
     const right = getRtlSlopeFanCardPosition(6, 7, 340);
@@ -11,6 +11,15 @@ describe("RTL sloped card hand layout", () => {
     expect(center.rotation).toBe(0);
     expect(center.bottom).toBeGreaterThan(left.bottom);
     expect(right.bottom).toBeGreaterThan(center.bottom);
+  });
+
+  it("lifts the middle of the hand above the straight RTL slope", () => {
+    const left = getRtlSlopeFanCardPosition(0, 7, 340);
+    const middle = getRtlSlopeFanCardPosition(3, 7, 340);
+    const right = getRtlSlopeFanCardPosition(6, 7, 340);
+    const straightMidpoint = (left.bottom + right.bottom) / 2;
+
+    expect(middle.bottom).toBeGreaterThan(straightMidpoint);
   });
 
   it("raises and layers the physical right side above the left side", () => {

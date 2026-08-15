@@ -55,9 +55,10 @@ export function getFanEdgeHitSlop(index: number, total: number, compact: boolean
 }
 
 /**
- * Returns an RTL hand slope: the physical right side of the hand is higher,
- * then the cards descend smoothly toward the left. Later cards sit above the
- * preceding cards so the exposed right-hand edges remain easy to select.
+ * Returns a curved RTL hand: the physical right side remains higher, while a
+ * gentle bow above the straight slope restores the natural fan silhouette.
+ * Later cards sit above preceding cards so the exposed right-hand edges stay
+ * easy to select.
  */
 export function getRtlSlopeFanCardPosition(
   index: number,
@@ -72,12 +73,14 @@ export function getRtlSlopeFanCardPosition(
   const usableWidth = Math.max(fanWidth - cardFootprint, 0);
   const left = cardCount === 1 ? usableWidth / 2 : (safeIndex / (cardCount - 1)) * usableWidth;
   const baseline = compact ? 2 : 4;
-  const slopeLift = compact ? 13 : 18;
+  const slopeLift = compact ? 15 : 20;
+  const curveLift = compact ? 6 : 8;
   const maxRotation = compact ? 7 : 10;
+  const fanCurve = 4 * rightwardProgress * (1 - rightwardProgress);
 
   return {
     left,
-    bottom: baseline + rightwardProgress * slopeLift,
+    bottom: baseline + rightwardProgress * slopeLift + fanCurve * curveLift,
     rotation: (rightwardProgress - 0.5) * maxRotation,
     zIndex: 10 + safeIndex,
   };
