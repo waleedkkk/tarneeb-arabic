@@ -55,10 +55,11 @@ export function getFanEdgeHitSlop(index: number, total: number, compact: boolean
 }
 
 /**
- * Returns a symmetric, shallow arc for a hand of cards. The center card stays
- * upright and highest, while matching cards on both sides mirror each other.
+ * Returns an RTL hand slope: the physical right side of the hand is higher,
+ * then the cards descend smoothly toward the left. Later cards sit above the
+ * preceding cards so the exposed right-hand edges remain easy to select.
  */
-export function getEqualFanCardPosition(
+export function getRtlSlopeFanCardPosition(
   index: number,
   total: number,
   fanWidth: number,
@@ -67,18 +68,17 @@ export function getEqualFanCardPosition(
 ): FanCardPosition {
   const cardCount = Math.max(total, 1);
   const safeIndex = Math.min(Math.max(index, 0), cardCount - 1);
-  const center = (cardCount - 1) / 2;
-  const normalizedDistance = center === 0 ? 0 : (safeIndex - center) / center;
+  const rightwardProgress = cardCount === 1 ? 0.5 : safeIndex / (cardCount - 1);
   const usableWidth = Math.max(fanWidth - cardFootprint, 0);
   const left = cardCount === 1 ? usableWidth / 2 : (safeIndex / (cardCount - 1)) * usableWidth;
   const baseline = compact ? 2 : 4;
-  const arcLift = compact ? 10 : 14;
-  const maxRotation = compact ? 9 : 12;
+  const slopeLift = compact ? 13 : 18;
+  const maxRotation = compact ? 7 : 10;
 
   return {
     left,
-    bottom: baseline + (1 - normalizedDistance ** 2) * arcLift,
-    rotation: normalizedDistance === 0 ? 0 : -normalizedDistance * maxRotation,
-    zIndex: 20 - Math.round(Math.abs(normalizedDistance) * 8),
+    bottom: baseline + rightwardProgress * slopeLift,
+    rotation: (rightwardProgress - 0.5) * maxRotation,
+    zIndex: 10 + safeIndex,
   };
 }

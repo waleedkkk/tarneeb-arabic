@@ -1,7 +1,7 @@
 import { StyleSheet, useWindowDimensions, View } from "react-native";
 
 import { PlayingCard } from "./card";
-import { getEqualFanCardPosition, getFanEdgeHitSlop, getResponsiveFanMetrics } from "@/lib/tarneeb/card-fan-layout";
+import { getFanEdgeHitSlop, getResponsiveFanMetrics, getRtlSlopeFanCardPosition } from "@/lib/tarneeb/card-fan-layout";
 import type { Card } from "@/lib/tarneeb/types";
 
 interface CurvedCardHandProps {
@@ -29,7 +29,7 @@ export function CurvedCardHand({
       style={[styles.fan, { width: metrics.fanWidth, height: metrics.fanHeight }]}
     >
       {cards.map((card, index) => {
-        const position = getEqualFanCardPosition(
+        const position = getRtlSlopeFanCardPosition(
           index,
           cards.length,
           metrics.fanWidth,
