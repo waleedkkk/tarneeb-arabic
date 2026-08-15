@@ -1,8 +1,9 @@
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useGame } from "@/lib/tarneeb/game-context";
 import { legalCards, suitName, suitSymbol } from "@/lib/tarneeb/engine";
 import type { Suit } from "@/lib/tarneeb/types";
 import { GameTable, LastTrickBanner } from "@/components/tarneeb/table";
+import { PlayingCard } from "@/components/tarneeb/card";
 
 const SUITS: Suit[] = ["spades", "hearts", "diamonds", "clubs"];
 
@@ -67,6 +68,17 @@ function Bidding() {
           <Text style={styles.panelText}>{highest === null ? "لم يُسجل عرض بعد" : `صاحب الطلب: ${state.players[state.bidding.highestBidder!].name}`}</Text>
         </View>
         <View style={styles.playerStrip}>{state.players.map((player) => <View key={player.id} style={[styles.playerChip, state.bidding.currentPlayer === player.id && styles.playerChipActive, !state.bidding.activeSeats[player.id] && styles.playerChipPassed]}><Text style={styles.playerChipText}>{player.name}</Text><Text style={styles.playerChipSub}>{state.bidding.activeSeats[player.id] ? (state.bidding.currentPlayer === player.id ? "دوره" : "بالانتظار") : "مرّ"}</Text></View>)}</View>
+        <View style={styles.biddingHand} accessibilityLabel="أوراقك الحالية للمزايدة">
+          <View style={styles.biddingHandHeader}><View><Text style={styles.biddingHandTitle}>أوراقك</Text><Text style={styles.biddingHandHint}>اسحب لمراجعة جميع الأوراق قبل الطلب</Text></View><Text style={styles.biddingHandCount}>{state.players[0].hand.length} ورقة</Text></View>
+          <FlatList
+            horizontal
+            data={state.players[0].hand}
+            keyExtractor={(card) => card.id}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.biddingHandList}
+            renderItem={({ item, index }) => <PlayingCard card={item} entranceDelay={index * 22} />}
+          />
+        </View>
         <Text style={styles.sectionTitle}>{isHumanTurn ? "اختر عرضك" : "يفكر الخصوم في المزايدة…"}</Text>
         <Text style={styles.sectionText}>{isHumanTurn ? `يمكنك طلب ${minBid} أو أكثر.` : "ستظهر نتيجتهم بعد لحظات."}</Text>
         <View style={styles.bidGrid}>{Array.from({ length: 13 - minBid + 1 }, (_, index) => minBid + index).map((bid) => <NumberButton key={bid} label={String(bid)} disabled={!isHumanTurn} onPress={() => game.submitHumanBid(bid)} />)}</View>
@@ -163,6 +175,12 @@ const styles = StyleSheet.create({
   playerChipPassed: { opacity: 0.45 },
   playerChipText: { color: "#FFF8E7", fontWeight: "800", writingDirection: "rtl" },
   playerChipSub: { color: "#B4D6C7", fontSize: 11, marginTop: 2, writingDirection: "rtl" },
+  biddingHand: { backgroundColor: "rgba(255,248,231,0.08)", borderWidth: 1, borderColor: "rgba(255,248,231,0.16)", borderRadius: 20, marginTop: 18, paddingVertical: 12 },
+  biddingHandHeader: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 14, marginBottom: 9 },
+  biddingHandTitle: { color: "#FFF8E7", fontSize: 16, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
+  biddingHandHint: { color: "#B4D6C7", fontSize: 11, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
+  biddingHandCount: { color: "#F5D889", fontSize: 12, fontWeight: "800", writingDirection: "rtl" },
+  biddingHandList: { paddingHorizontal: 12, gap: 4, paddingBottom: 5 },
   sectionTitle: { color: "#FFF8E7", fontSize: 22, fontWeight: "900", textAlign: "right", marginTop: 28, writingDirection: "rtl" },
   sectionText: { color: "#B4D6C7", textAlign: "right", fontSize: 13, marginTop: 4, writingDirection: "rtl" },
   bidGrid: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 9, marginTop: 18, justifyContent: "center" },
