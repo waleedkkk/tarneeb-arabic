@@ -74,7 +74,23 @@ export function PlayingCard({ card, onPress, disabled = false, selected = false,
 export function CardBack({ compact = false }: { compact?: boolean }) {
   return (
     <View style={[styles.back, compact && styles.compactBack]}>
-      <View style={styles.backInner}><Text style={styles.backMark}>ط</Text></View>
+      <View style={styles.backFrame}>
+        <View style={styles.backInner}>
+          <View pointerEvents="none" style={styles.backPattern}>
+            <View style={[styles.patternDiamond, styles.patternDiamondTop]} />
+            <View style={[styles.patternDiamond, styles.patternDiamondUpperLeft]} />
+            <View style={[styles.patternDiamond, styles.patternDiamondUpperRight]} />
+            <View style={[styles.patternDiamond, styles.patternDiamondLowerLeft]} />
+            <View style={[styles.patternDiamond, styles.patternDiamondLowerRight]} />
+            <View style={[styles.patternDiamond, styles.patternDiamondBottom]} />
+          </View>
+          <View style={styles.backMedallion}>
+            <View style={styles.backMedallionInner}>
+              <Text style={[styles.backMark, compact && styles.compactBackMark]}>ط</Text>
+            </View>
+          </View>
+        </View>
+      </View>
     </View>
   );
 }
@@ -94,8 +110,20 @@ const styles = StyleSheet.create({
   centerSuit: { alignSelf: "center", fontSize: 32, fontWeight: "700", lineHeight: 34 },
   red: { color: "#C9413A" },
   black: { color: "#17211D" },
-  back: { width: 35, height: 50, padding: 3, borderRadius: 7, backgroundColor: "#E3B341", borderWidth: 1, borderColor: "#F5D889" },
+  back: { width: 35, height: 50, padding: 2, borderRadius: 7, backgroundColor: "#FFF8E7", borderWidth: 1, borderColor: "#D8CDAF", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 2, elevation: 2 },
   compactBack: { width: 27, height: 38, borderRadius: 6 },
-  backInner: { flex: 1, borderRadius: 4, borderWidth: 1.5, borderColor: "#0E3B2E", alignItems: "center", justifyContent: "center", backgroundColor: "#16624A" },
-  backMark: { color: "#E3B341", fontWeight: "900", fontSize: 18 },
+  backFrame: { flex: 1, borderRadius: 5, borderWidth: 1, borderColor: "#9E1F2E", padding: 1.5, backgroundColor: "#F5DDA0" },
+  backInner: { flex: 1, overflow: "hidden", borderRadius: 3, borderWidth: 1, borderColor: "#FDEEC5", alignItems: "center", justifyContent: "center", backgroundColor: "#A61E2D" },
+  backPattern: { ...StyleSheet.absoluteFillObject },
+  patternDiamond: { position: "absolute", width: 5, height: 5, backgroundColor: "#F8D987", opacity: 0.58, transform: [{ rotate: "45deg" }] },
+  patternDiamondTop: { top: 3, left: "42%" },
+  patternDiamondUpperLeft: { top: "31%", left: 3 },
+  patternDiamondUpperRight: { top: "31%", right: 3 },
+  patternDiamondLowerLeft: { bottom: "31%", left: 3 },
+  patternDiamondLowerRight: { bottom: "31%", right: 3 },
+  patternDiamondBottom: { bottom: 3, left: "42%" },
+  backMedallion: { width: 17, height: 17, borderRadius: 9, padding: 1.5, borderWidth: 1, borderColor: "#FBE7AF", backgroundColor: "#8C1727", alignItems: "center", justifyContent: "center" },
+  backMedallionInner: { width: "100%", height: "100%", borderRadius: 8, borderWidth: 1, borderColor: "#F2C765", alignItems: "center", justifyContent: "center", backgroundColor: "#B82738" },
+  backMark: { color: "#FFF4CE", fontWeight: "900", fontSize: 11, lineHeight: 13 },
+  compactBackMark: { fontSize: 9, lineHeight: 11 },
 });
