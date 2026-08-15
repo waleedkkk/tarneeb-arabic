@@ -1,5 +1,5 @@
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useGame } from "@/lib/tarneeb/game-context";
 import { useLocalRoom } from "@/lib/tarneeb/local-room-context";
@@ -39,17 +39,23 @@ export default function GameScreen() {
 }
 
 function TrickResultOverlay({ state, onNext, canAdvance }: { state: MatchState; onNext: () => void; canAdvance: boolean }) {
-  const [ready, setReady] = useState(false);
+  const [isAdvancing, setIsAdvancing] = useState(false);
+  const advancedTrickKey = useRef<string | null>(null);
   const trickKey = state.lastTrick ? `${state.lastTrick.winnerId}-${state.lastTrick.plays.map((play) => play.card.id).join("-")}` : null;
 
   useEffect(() => {
-    setReady(false);
-    if (!trickKey) return;
-    const timer = setTimeout(() => setReady(true), 930);
+    setIsAdvancing(false);
+    if (!trickKey || !canAdvance || advancedTrickKey.current === trickKey) return;
+    const timer = setTimeout(() => {
+      if (advancedTrickKey.current === trickKey) return;
+      advancedTrickKey.current = trickKey;
+      setIsAdvancing(true);
+      onNext();
+    }, 1250);
     return () => clearTimeout(timer);
-  }, [trickKey]);
+  }, [canAdvance, onNext, trickKey]);
 
-  return <View style={styles.resultOverlay}><LastTrickBanner state={state} />{ready && canAdvance ? <PrimaryButton label="ابدأ اللمّة التالية" onPress={onNext} /> : <Text style={styles.collectionWait}>{ready ? "بانتظار المضيف لبدء اللمّة التالية" : "تُجمع أوراق اللمّة..."}</Text>}</View>;
+  return <View style={styles.resultOverlay}><LastTrickBanner state={state} /><Text style={styles.collectionWait}>{canAdvance ? (isAdvancing ? "تبدأ اللمّة التالية…" : "تبدأ اللمّة التالية تلقائيًا…") : "بانتظار المضيف لبدء اللمّة التالية…"}</Text></View>;
 }
 
 function Home({ onStart, onLocal }: { onStart: () => void; onLocal: () => void }) {
