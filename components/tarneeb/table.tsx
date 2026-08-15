@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   playRight: { right: 8, top: 68 },
   tableHint: { alignSelf: "center", marginTop: 92, color: "#D9EEE4", fontSize: 13, writingDirection: "rtl" },
   handArea: { height: 140, marginTop: 10, paddingBottom: 8, alignItems: "center" },
-  handHeader: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 4, marginBottom: 6 },
+  handHeader: { alignSelf: "stretch", flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 4, marginBottom: 6 },
   handTitle: { color: "#FFF8E7", fontSize: 16, fontWeight: "800", writingDirection: "rtl" },
   handHint: { color: "#B4D6C7", fontSize: 12, writingDirection: "rtl" },
   lastTrick: { margin: 12, backgroundColor: "#FFF8E7", borderRadius: 18, padding: 14, alignItems: "center" },

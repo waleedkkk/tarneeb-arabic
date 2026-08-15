@@ -1,5 +1,6 @@
-import { Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useEffect, useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useGame } from "@/lib/tarneeb/game-context";
 import { useLocalRoom } from "@/lib/tarneeb/local-room-context";
 import { legalCards, suitName, suitStrength, suitSymbol } from "@/lib/tarneeb/engine";
@@ -24,7 +25,7 @@ export default function GameScreen() {
   if (state.phase === "roundResult") return <RoundResult />;
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
       <GameTable state={state} onCardPress={(cardId) => {
         const card = state.players[0].hand.find((item) => item.id === cardId);
         if (card && legalCards(state.players[0].hand, state.trick).some((item) => item.id === card.id)) {
@@ -53,7 +54,7 @@ function TrickResultOverlay({ state, onNext, canAdvance }: { state: MatchState; 
 
 function Home({ onStart, onLocal }: { onStart: () => void; onLocal: () => void }) {
   return (
-    <SafeAreaView style={styles.homeSafe}>
+    <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.homeSafe}>
       <View style={styles.homeAccentOne} /><View style={styles.homeAccentTwo} />
       <View style={styles.homeContent}>
         <View style={styles.logoMark}><Text style={styles.logoMarkText}>ط</Text></View>
@@ -74,7 +75,7 @@ function Home({ onStart, onLocal }: { onStart: () => void; onLocal: () => void }
 }
 
 function ConnectionLostScreen({ message, onReturn }: { message: string; onReturn: () => void }) {
-  return <SafeAreaView style={styles.safe}><View style={styles.centerPage}><Text style={styles.connectionKicker}>الغرفة المحلية</Text><Text style={styles.pageTitle}>انقطع الاتصال</Text><Text style={styles.connectionMessage}>{message}</Text><PrimaryButton label="العودة للرئيسية" onPress={onReturn} /></View></SafeAreaView>;
+  return <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}><View style={styles.centerPage}><Text style={styles.connectionKicker}>الغرفة المحلية</Text><Text style={styles.pageTitle}>انقطع الاتصال</Text><Text style={styles.connectionMessage}>{message}</Text><PrimaryButton label="العودة للرئيسية" onPress={onReturn} /></View></SafeAreaView>;
 }
 
 function Feature({ label, text }: { label: string; text: string }) {
@@ -91,7 +92,7 @@ function Bidding() {
   const strengths = SUITS.map((suit) => suitStrength(state.players[0].hand, suit));
   const strongest = [...strengths].sort((a, b) => b.score - a.score)[0];
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <RoundHeader round={state.round} label="المزايدة" />
         <View style={styles.panel}>
@@ -124,7 +125,7 @@ function TrumpSelection() {
   const humanIsBidder = state.bidding.highestBidder === 0;
   const strengths = SUITS.map((suit) => suitStrength(state.players[0].hand, suit));
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
       <ScrollView contentContainerStyle={styles.trumpContent}>
         <Text style={styles.kicker}>الطلب {state.bidding.highestBid}</Text>
         <Text style={styles.pageTitle}>{humanIsBidder ? "اختر الطرنيب" : "يختار الخصم الطرنيب"}</Text>
@@ -143,7 +144,7 @@ function RoundResult() {
   const summary = state.roundSummary!;
   const matchWinner = state.scores[0] >= game.settings.targetScore ? "فريقك" : state.scores[1] >= game.settings.targetScore ? "الفريق المنافس" : null;
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
       <View style={styles.centerPage}>
         <Text style={styles.kicker}>نهاية الجولة {state.round}</Text>
         <Text style={styles.pageTitle}>{matchWinner ? `فاز ${matchWinner} بالمباراة` : summary.madeContract ? "تم تحقيق الطلب" : "لم يتحقق الطلب"}</Text>
