@@ -18,9 +18,15 @@ export function GameTable({ state, onCardPress }: { state: MatchState; onCardPre
   return (
     <View style={styles.screen}>
       <View style={styles.statusRow}>
-        <View style={styles.scorePill}><Text style={styles.scoreLabel}>فريقك</Text><Text style={styles.scoreValue}>{state.scores[0]}</Text></View>
+        <View style={styles.scorePill}>
+          <View style={styles.teamHeading}><Text style={styles.scoreLabel}>فريقك</Text><View style={styles.trickBadge}><Text style={styles.trickBadgeValue}>{state.tricksWon[0]}</Text><Text style={styles.trickBadgeLabel}>لمم</Text></View></View>
+          <Text style={styles.scoreValue}>{state.scores[0]}</Text>
+        </View>
         <View style={styles.contractPill}><Text style={styles.contractText}>الطلب {state.bidding.highestBid} · {trump ? `${suitName(trump)} ${suitSymbol(trump)}` : "بانتظار الطرنيب"}</Text></View>
-        <View style={styles.scorePill}><Text style={styles.scoreLabel}>الخصم</Text><Text style={styles.scoreValue}>{state.scores[1]}</Text></View>
+        <View style={styles.scorePill}>
+          <View style={styles.teamHeading}><Text style={styles.scoreLabel}>الخصم</Text><View style={styles.trickBadge}><Text style={styles.trickBadgeValue}>{state.tricksWon[1]}</Text><Text style={styles.trickBadgeLabel}>لمم</Text></View></View>
+          <Text style={styles.scoreValue}>{state.scores[1]}</Text>
+        </View>
       </View>
 
       <View style={styles.table}>
@@ -170,8 +176,12 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#0E3B2E", paddingHorizontal: 14 },
   statusRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: 8, gap: 8 },
   scorePill: { minWidth: 66, alignItems: "center", backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6 },
+  teamHeading: { flexDirection: "row", alignItems: "center", gap: 5 },
   scoreLabel: { color: "#D9EEE4", fontSize: 11, writingDirection: "rtl" },
   scoreValue: { color: "#FFF8E7", fontSize: 20, fontWeight: "800", lineHeight: 24 },
+  trickBadge: { flexDirection: "row", alignItems: "baseline", gap: 2, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 9, backgroundColor: "#E3B341" },
+  trickBadgeValue: { color: "#173C2F", fontSize: 12, fontWeight: "900" },
+  trickBadgeLabel: { color: "#173C2F", fontSize: 9, fontWeight: "900" },
   contractPill: { flex: 1, alignItems: "center", paddingHorizontal: 4 },
   contractText: { color: "#F5D889", fontSize: 12, fontWeight: "700", textAlign: "center", writingDirection: "rtl" },
   table: { flex: 1, minHeight: 330, marginTop: 10, borderRadius: 28, backgroundColor: "#16624A", borderWidth: 1, borderColor: "rgba(245,216,137,0.4)", overflow: "hidden" },
