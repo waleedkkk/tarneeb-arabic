@@ -56,6 +56,7 @@ export function CurvedCardHand({
               entranceDelay={index * entranceStep}
               disabled={disabled}
               hitSlop={getFanEdgeHitSlop(index, cards.length, metrics.compact)}
+              edgeFeedback={metrics.compact && (index === 0 || index === cards.length - 1)}
               onPress={onCardPress ? () => onCardPress(card.id) : undefined}
             />
           </View>
