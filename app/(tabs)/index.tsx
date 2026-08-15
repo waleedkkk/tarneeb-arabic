@@ -1,11 +1,11 @@
-import { FlatList, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useEffect, useState } from "react";
 import { useGame } from "@/lib/tarneeb/game-context";
 import { useLocalRoom } from "@/lib/tarneeb/local-room-context";
 import { legalCards, suitName, suitStrength, suitSymbol } from "@/lib/tarneeb/engine";
 import type { MatchState, Suit } from "@/lib/tarneeb/types";
 import { GameTable, LastTrickBanner } from "@/components/tarneeb/table";
-import { PlayingCard } from "@/components/tarneeb/card";
+import { CurvedCardHand } from "@/components/tarneeb/card-fan";
 import { LocalRoomSheet } from "@/components/tarneeb/local-room-sheet";
 
 const SUITS: Suit[] = ["spades", "hearts", "diamonds", "clubs"];
@@ -102,14 +102,7 @@ function Bidding() {
         <View style={styles.playerStrip}>{state.players.map((player) => <View key={player.id} style={[styles.playerChip, state.bidding.currentPlayer === player.id && styles.playerChipActive, !state.bidding.activeSeats[player.id] && styles.playerChipPassed]}><Text style={styles.playerChipText}>{player.name}</Text><Text style={styles.playerChipSub}>{state.bidding.activeSeats[player.id] ? (state.bidding.currentPlayer === player.id ? "دوره" : "بالانتظار") : "مرّ"}</Text></View>)}</View>
         <View style={styles.biddingHand} accessibilityLabel="أوراقك الحالية للمزايدة">
           <View style={styles.biddingHandHeader}><View><Text style={styles.biddingHandTitle}>أوراقك</Text><Text style={styles.biddingHandHint}>اسحب لمراجعة جميع الأوراق قبل الطلب</Text></View><Text style={styles.biddingHandCount}>{state.players[0].hand.length} ورقة</Text></View>
-          <FlatList
-            horizontal
-            data={state.players[0].hand}
-            keyExtractor={(card) => card.id}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.biddingHandList}
-            renderItem={({ item, index }) => <PlayingCard card={item} entranceDelay={index * 22} />}
-          />
+          <CurvedCardHand cards={state.players[0].hand} accessibilityLabel="أوراقك الحالية مرتبة ضمن قوس متساوٍ للمزايدة" />
         </View>
         {game.settings.showStrengthIndicator && <View style={styles.strengthPanel} accessibilityLabel="مؤشر قوة أنواع أوراقك">
           <View style={styles.strengthHeader}><View><View style={styles.strengthTitleRow}><Text style={styles.strengthTitle}>قوة الأنواع</Text><StrengthInfoButton /></View><Text style={styles.strengthDescription}>تُحسب من عدد الأوراق وA وK وQ وJ و10</Text></View><Text style={styles.strengthSuggestion}>الأقوى: {suitName(strongest.suit)}</Text></View>
@@ -230,7 +223,6 @@ const styles = StyleSheet.create({
   biddingHandTitle: { color: "#FFF8E7", fontSize: 16, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
   biddingHandHint: { color: "#B4D6C7", fontSize: 11, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
   biddingHandCount: { color: "#F5D889", fontSize: 12, fontWeight: "800", writingDirection: "rtl" },
-  biddingHandList: { paddingHorizontal: 12, gap: 4, paddingBottom: 5 },
   strengthPanel: { backgroundColor: "rgba(56,189,248,0.09)", borderWidth: 1, borderColor: "rgba(56,189,248,0.28)", borderRadius: 20, marginTop: 14, padding: 14 },
   strengthHeader: { flexDirection: "row-reverse", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 12 },
   strengthTitleRow: { flexDirection: "row-reverse", alignItems: "center", alignSelf: "flex-start", gap: 6 },

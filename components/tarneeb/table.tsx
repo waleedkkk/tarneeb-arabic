@@ -1,19 +1,17 @@
-import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
-import { PlayingCard, CardBack } from "./card";
+import { StyleSheet, Text, View } from "react-native";
+import { CardBack, PlayingCard } from "./card";
+import { CurvedCardHand } from "./card-fan";
 import { cardLabel, legalCards, suitName, suitSymbol } from "@/lib/tarneeb/engine";
 import type { MatchState } from "@/lib/tarneeb/types";
 import { useEffect } from "react";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 
 export function GameTable({ state, onCardPress }: { state: MatchState; onCardPress: (cardId: string) => void }) {
-  const { width } = useWindowDimensions();
   const humanTurn = state.phase === "playing" && (state.trick.plays.length === 0 ? state.trick.leaderId === 0 : (state.trick.plays.at(-1)?.playerId ?? 3) === 3);
   const playable = humanTurn ? legalCards(state.players[0].hand, state.trick).map((card) => card.id) : [];
   const cardBySeat = Object.fromEntries(state.trick.plays.map((play) => [play.playerId, play.card]));
   const trump = state.bidding.trumpSuit;
   const hand = state.players[0].hand;
-  const fanWidth = Math.min(Math.max(width - 30, 270), 340);
-  const fanSpacing = hand.length > 1 ? (fanWidth - 60) / (hand.length - 1) : 0;
 
   return (
     <View style={styles.screen}>
@@ -45,9 +43,7 @@ export function GameTable({ state, onCardPress }: { state: MatchState; onCardPre
 
       <View style={styles.handArea}>
         <View style={styles.handHeader}><Text style={styles.handTitle}>أوراقك</Text><Text style={styles.handHint}>{humanTurn ? "اضغط على ورقة متاحة" : "دور الخصم"}</Text></View>
-        <View style={[styles.fanHand, { width: fanWidth }]} accessibilityLabel="يدك مرتبة كمروحة أوراق">
-          {hand.map((card, index) => <View key={card.id} style={[styles.fanCardSlot, fanCardStyle(index, hand.length, fanSpacing)]}><PlayingCard card={card} entranceDelay={index * 26} disabled={!humanTurn || !playable.includes(card.id)} onPress={() => onCardPress(card.id)} /></View>)}
-        </View>
+        <CurvedCardHand cards={hand} accessibilityLabel="يدك مرتبة ضمن قوس متساوٍ" entranceStep={26} disabledCardIds={!humanTurn ? hand.map((card) => card.id) : hand.filter((card) => !playable.includes(card.id)).map((card) => card.id)} onCardPress={onCardPress} />
       </View>
     </View>
   );
@@ -111,16 +107,6 @@ const SWEEP_TO_WINNER = {
 function currentSeat(state: MatchState) {
   if (state.phase !== "playing") return null;
   return state.trick.plays.length === 0 ? state.trick.leaderId : ((state.trick.plays.at(-1)!.playerId + 1) % 4);
-}
-
-function fanCardStyle(index: number, total: number, spacing: number) {
-  const progress = total > 1 ? index / (total - 1) : 0;
-  return {
-    right: index * spacing,
-    bottom: 4 + progress * 13,
-    zIndex: total - index,
-    transform: [{ rotate: `${-progress * 17}deg` }],
-  };
 }
 
 function PlayerSeat({ name, cards, position, active }: { name: string; cards: number; position: "top" | "left" | "right"; active: boolean }) {
@@ -211,8 +197,6 @@ const styles = StyleSheet.create({
   handHeader: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 4, marginBottom: 6 },
   handTitle: { color: "#FFF8E7", fontSize: 16, fontWeight: "800", writingDirection: "rtl" },
   handHint: { color: "#B4D6C7", fontSize: 12, writingDirection: "rtl" },
-  fanHand: { height: 112, position: "relative", alignSelf: "center" },
-  fanCardSlot: { position: "absolute", bottom: 0 },
   lastTrick: { margin: 12, backgroundColor: "#FFF8E7", borderRadius: 18, padding: 14, alignItems: "center" },
   lastTrickTitle: { color: "#0E3B2E", fontSize: 16, fontWeight: "900", writingDirection: "rtl" },
   lastTrickDetail: { color: "#52635C", fontSize: 13, marginTop: 3, writingDirection: "rtl" },
