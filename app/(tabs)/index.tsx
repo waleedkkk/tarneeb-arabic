@@ -174,6 +174,21 @@ function RoundResult() {
   const { state } = game;
   const summary = state.roundSummary!;
   const matchWinner = state.scores[0] >= game.settings.targetScore ? "فريقك" : state.scores[1] >= game.settings.targetScore ? "الفريق المنافس" : null;
+  const [exitConfirmationVisible, setExitConfirmationVisible] = useState(false);
+  const isRoomMatch = state.matchMode === "localRoom";
+  const canRestart = !isRoomMatch || room.role === "host";
+  const restart = () => {
+    if (isRoomMatch) room.startRoomMatch();
+    else game.startMatch();
+  };
+  const exit = () => {
+    setExitConfirmationVisible(false);
+    if (isRoomMatch) {
+      void room.leaveRoom().finally(() => game.exitMatch());
+      return;
+    }
+    game.exitMatch();
+  };
   return (
     <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
       <View style={styles.centerPage}>
@@ -181,9 +196,13 @@ function RoundResult() {
         <Text style={styles.pageTitle}>{matchWinner ? `فاز ${matchWinner} بالمباراة` : summary.madeContract ? "تم تحقيق الطلب" : "لم يتحقق الطلب"}</Text>
         <Text style={styles.pageSubtitle}>كان الطلب {summary.bid}، وحصل فريقك على {summary.roundTricks[0]} لمم مقابل {summary.roundTricks[1]} للخصم.</Text>
         <View style={styles.finalScore}><ScoreBlock label="فريقك" score={state.scores[0]} change={summary.scoreChange[0]} /><View style={styles.scoreDivider} /><ScoreBlock label="الخصم" score={state.scores[1]} change={summary.scoreChange[1]} /></View>
-        {state.matchMode === "localRoom" && room.role !== "host" ? <Text style={styles.collectionWait}>بانتظار المضيف للمتابعة</Text> : matchWinner ? <PrimaryButton label="ابدأ مباراة جديدة" onPress={state.matchMode === "localRoom" ? room.startRoomMatch : game.startMatch} /> : <PrimaryButton label="الجولة التالية" onPress={state.matchMode === "localRoom" ? room.requestNextRound : game.nextRound} />}
-        <Pressable onPress={() => { if (state.matchMode === "localRoom") void room.leaveRoom(); game.exitMatch(); }} style={({ pressed }) => [styles.exitButton, pressed && styles.buttonPressed]}><Text style={styles.exitText}>العودة للرئيسية</Text></Pressable>
+        {!matchWinner && (isRoomMatch && room.role !== "host" ? <Text style={styles.collectionWait}>بانتظار المضيف للمتابعة</Text> : <PrimaryButton label="الجولة التالية" onPress={isRoomMatch ? room.requestNextRound : game.nextRound} />)}
+        <View style={styles.roundShortcutRow}>
+          <Pressable accessibilityRole="button" accessibilityLabel="إعادة اللعب مباشرة" disabled={!canRestart} onPress={restart} style={({ pressed }) => [styles.roundShortcut, styles.roundShortcutReplay, pressed && canRestart && styles.buttonPressed, !canRestart && styles.roundShortcutDisabled]}><Text style={styles.roundShortcutIcon}>↻</Text><View><Text style={styles.roundShortcutTitle}>إعادة اللعب</Text><Text style={styles.roundShortcutHint}>{canRestart ? "مباراة جديدة فورًا" : "للمضيف فقط"}</Text></View></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="خروج سريع من المباراة" onPress={() => setExitConfirmationVisible(true)} style={({ pressed }) => [styles.roundShortcut, styles.roundShortcutExit, pressed && styles.buttonPressed]}><Text style={styles.roundShortcutIcon}>⌂</Text><View><Text style={styles.roundShortcutTitle}>خروج سريع</Text><Text style={styles.roundShortcutHint}>العودة للرئيسية</Text></View></Pressable>
+        </View>
       </View>
+      <Modal transparent visible={exitConfirmationVisible} animationType="fade" onRequestClose={() => setExitConfirmationVisible(false)}><View style={styles.gameMenuModal}><Pressable accessibilityLabel="إلغاء الخروج" style={styles.gameMenuBackdrop} onPress={() => setExitConfirmationVisible(false)} /><View style={styles.gameMenuSheet}><View style={styles.gameMenuHandle} /><Text style={styles.gameMenuTitle}>إنهاء المباراة؟</Text><Text style={styles.gameMenuDescription}>{isRoomMatch ? "ستغادر الغرفة المحلية ولن تستطيع متابعة هذه المباراة من هذا الجهاز." : "ستنهي المباراة الحالية وسيُحذف التقدم المحفوظ لهذه المباراة."}</Text><View style={styles.confirmationButtons}><Pressable onPress={() => setExitConfirmationVisible(false)} style={({ pressed }) => [styles.confirmationCancel, pressed && styles.buttonPressed]}><Text style={styles.confirmationCancelText}>إلغاء</Text></Pressable><Pressable onPress={exit} style={({ pressed }) => [styles.confirmationDestructive, pressed && styles.buttonPressed]}><Text style={styles.confirmationDestructiveText}>إنهاء المباراة</Text></Pressable></View></View></View></Modal>
     </SafeAreaView>
   );
 }
@@ -338,6 +357,14 @@ const styles = StyleSheet.create({
   localMatchButtonHint: { color: "#B4D6C7", fontSize: 11, marginTop: 3, writingDirection: "rtl" },
   connectionKicker: { color: "#E3B341", fontSize: 14, fontWeight: "800", writingDirection: "rtl" },
   connectionMessage: { color: "#B4D6C7", fontSize: 15, lineHeight: 23, textAlign: "center", marginTop: 10, marginBottom: 30, writingDirection: "rtl", maxWidth: 280 },
+  roundShortcutRow: { flexDirection: "row-reverse", gap: 10, width: "100%", maxWidth: 360, marginTop: 14 },
+  roundShortcut: { flex: 1, minHeight: 70, borderRadius: 17, padding: 11, flexDirection: "row-reverse", alignItems: "center", justifyContent: "flex-start", gap: 8, borderWidth: 1 },
+  roundShortcutReplay: { backgroundColor: "rgba(227,179,65,0.18)", borderColor: "rgba(227,179,65,0.7)" },
+  roundShortcutExit: { backgroundColor: "rgba(255,248,231,0.08)", borderColor: "rgba(255,248,231,0.32)" },
+  roundShortcutDisabled: { opacity: 0.5 },
+  roundShortcutIcon: { color: "#F5D889", fontSize: 25, fontWeight: "900", lineHeight: 28 },
+  roundShortcutTitle: { color: "#FFF8E7", fontSize: 14, fontWeight: "900", writingDirection: "rtl" },
+  roundShortcutHint: { color: "#B4D6C7", fontSize: 10, marginTop: 3, writingDirection: "rtl" },
   matchActionsButton: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: "rgba(255,248,231,0.3)", backgroundColor: "rgba(255,248,231,0.12)", alignItems: "center", justifyContent: "center" },
   matchActionsButtonPressed: { transform: [{ scale: 0.94 }], opacity: 0.74 },
   matchActionsButtonText: { color: "#FFF8E7", fontSize: 24, fontWeight: "900", lineHeight: 24, marginTop: -5 },
