@@ -56,6 +56,16 @@ export function getFanEdgeHitSlop(index: number, total: number, compact: boolean
   };
 }
 
+/** Minimum upward movement that intentionally releases a card toward the table. */
+export function getCardDragDropThreshold(compact: boolean) {
+  return compact ? 54 : 66;
+}
+
+/** Whether an upward drag deliberately reaches the table drop zone. */
+export function isCardDragDrop(translationY: number, compact: boolean) {
+  return translationY <= -getCardDragDropThreshold(compact);
+}
+
 /**
  * Returns a balanced fan: both sides begin at the same baseline, while the
  * center rises gently to form an even arc. Cards retain symmetric rotation

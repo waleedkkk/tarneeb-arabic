@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getBalancedFanCardPosition, getFanEdgeHitSlop, getResponsiveFanMetrics } from "../lib/tarneeb/card-fan-layout";
+import { getBalancedFanCardPosition, getCardDragDropThreshold, getFanEdgeHitSlop, getResponsiveFanMetrics, isCardDragDrop } from "../lib/tarneeb/card-fan-layout";
 
 describe("balanced card hand layout", () => {
   it("keeps the center card upright at the top of an even arc", () => {
@@ -75,5 +75,14 @@ describe("balanced card hand layout", () => {
     expect(getFanEdgeHitSlop(12, 13, true)).toMatchObject({ left: 4, right: 14 });
     expect(getFanEdgeHitSlop(6, 13, true)).toBeUndefined();
     expect(getFanEdgeHitSlop(0, 13, false)).toBeUndefined();
+  });
+
+  it("uses an achievable upward release threshold for card drag and drop", () => {
+    expect(getCardDragDropThreshold(true)).toBe(54);
+    expect(getCardDragDropThreshold(false)).toBe(66);
+    expect(isCardDragDrop(-54, true)).toBe(true);
+    expect(isCardDragDrop(-53, true)).toBe(false);
+    expect(isCardDragDrop(-66, false)).toBe(true);
+    expect(isCardDragDrop(-65, false)).toBe(false);
   });
 });

@@ -4,7 +4,7 @@ import { CurvedCardHand } from "./card-fan";
 import { cardLabel, legalCards, suitName, suitSymbol } from "@/lib/tarneeb/engine";
 import { getNativeTableLayout } from "@/lib/tarneeb/native-ui-layout";
 import type { CardFanCurve, MatchState } from "@/lib/tarneeb/types";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 
@@ -17,6 +17,7 @@ export function GameTable({ state, onCardPress, action, fanCurve }: { state: Mat
   const cardBySeat = Object.fromEntries(state.trick.plays.map((play) => [play.playerId, play.card]));
   const trump = state.bidding.trumpSuit;
   const hand = state.players[0].hand;
+  const [draggingCard, setDraggingCard] = useState(false);
 
   return (
     <View style={[styles.screen, { paddingHorizontal: nativeLayout.horizontalPadding }]}> 
@@ -38,6 +39,11 @@ export function GameTable({ state, onCardPress, action, fanCurve }: { state: Mat
         <PlayerSeat name={state.players[1].name} cards={state.players[1].handCount} position="right" active={currentSeat(state) === 1} />
 
         <View style={styles.trickArea}>
+          {humanTurn && (
+            <View pointerEvents="none" style={[styles.dropTarget, draggingCard && styles.dropTargetActive]}>
+              <Text style={[styles.dropTargetText, draggingCard && styles.dropTargetTextActive]}>{draggingCard ? "أفلت الورقة هنا" : "اسحب ورقة إلى الطاولة"}</Text>
+            </View>
+          )}
           {cardBySeat[2] && <TrickCard card={cardBySeat[2]} seat={2} collectingWinner={state.phase === "trickResult" ? state.lastTrick?.winnerId ?? null : null} />}
           {cardBySeat[3] && <TrickCard card={cardBySeat[3]} seat={3} collectingWinner={state.phase === "trickResult" ? state.lastTrick?.winnerId ?? null : null} />}
           {cardBySeat[1] && <TrickCard card={cardBySeat[1]} seat={1} collectingWinner={state.phase === "trickResult" ? state.lastTrick?.winnerId ?? null : null} />}
@@ -46,9 +52,9 @@ export function GameTable({ state, onCardPress, action, fanCurve }: { state: Mat
         </View>
       </View>
 
-      <View style={[styles.handArea, { height: nativeLayout.handAreaHeight, marginTop: nativeLayout.handTopMargin }]}>
-        <View style={styles.handHeader}><Text style={styles.handTitle}>أوراقك</Text><Text style={styles.handHint}>{humanTurn ? "اضغط على ورقة متاحة" : "دور الخصم"}</Text></View>
-        <CurvedCardHand cards={hand} accessibilityLabel="يدك مرتبة ضمن قوس متساوٍ" entranceStep={26} curveStrength={fanCurve} disabledCardIds={!humanTurn ? hand.map((card) => card.id) : hand.filter((card) => !playable.includes(card.id)).map((card) => card.id)} onCardPress={onCardPress} />
+      <View style={[styles.handArea, { height: nativeLayout.handAreaHeight, marginTop: nativeLayout.handTopMargin }]}> 
+        <View style={styles.handHeader}><Text style={styles.handTitle}>أوراقك</Text><Text style={styles.handHint}>{humanTurn ? "اسحب ورقة للطاولة أو اضغط عليها" : "دور الخصم"}</Text></View>
+        <CurvedCardHand cards={hand} accessibilityLabel="يدك مرتبة ضمن قوس متساوٍ" dragEnabled={humanTurn} entranceStep={26} curveStrength={fanCurve} disabledCardIds={!humanTurn ? hand.map((card) => card.id) : hand.filter((card) => !playable.includes(card.id)).map((card) => card.id)} onCardDragStateChange={setDraggingCard} onCardPress={onCardPress} />
       </View>
     </View>
   );
@@ -192,6 +198,10 @@ const styles = StyleSheet.create({
   firstSideCard: { width: 27, height: 38, alignItems: "center", justifyContent: "center" },
   sideCardStack: { width: 27, height: 22, marginTop: -16, alignItems: "center", justifyContent: "center" },
   trickArea: { position: "absolute", width: 190, height: 205, alignSelf: "center", top: "28%", left: "50%", transform: [{ translateX: -95 }], borderRadius: 95, borderWidth: 1, borderColor: "rgba(255,248,231,0.18)" },
+  dropTarget: { position: "absolute", top: 64, left: 20, right: 20, height: 78, borderRadius: 18, borderWidth: 1, borderStyle: "dashed", borderColor: "rgba(217,238,228,0.45)", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(14,59,46,0.18)" },
+  dropTargetActive: { borderColor: "#E3B341", backgroundColor: "rgba(227,179,65,0.18)", transform: [{ scale: 1.04 }] },
+  dropTargetText: { color: "#B4D6C7", fontSize: 12, fontWeight: "700", writingDirection: "rtl" },
+  dropTargetTextActive: { color: "#FFF8E7" },
   playSlot: { position: "absolute" },
   playTop: { top: 8, alignSelf: "center" },
   playBottom: { bottom: 8, alignSelf: "center" },
