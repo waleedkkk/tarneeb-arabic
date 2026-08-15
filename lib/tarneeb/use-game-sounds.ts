@@ -2,7 +2,7 @@ import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { useCallback, useEffect } from "react";
 
 const shuffleSource = require("../../assets/sounds/card-shuffle.mp3");
-const cardSource = require("../../assets/sounds/card-play.mp3");
+const cardSource = require("../../assets/sounds/card-place.mp3");
 
 function replay(player: ReturnType<typeof useAudioPlayer>, enabled: boolean) {
   if (!enabled) return;
