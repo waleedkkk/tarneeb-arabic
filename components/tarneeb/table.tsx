@@ -53,21 +53,31 @@ function currentSeat(state: MatchState) {
 }
 
 function fanCardStyle(index: number, total: number, spacing: number) {
-  const center = (total - 1) / 2;
-  const offset = index - center;
+  const progress = total > 1 ? index / (total - 1) : 0;
   return {
-    left: index * spacing,
-    bottom: Math.max(0, 12 - Math.abs(offset) * 2.2),
-    zIndex: total - Math.round(Math.abs(offset)),
-    transform: [{ rotate: `${offset * 2.2}deg` }],
+    right: index * spacing,
+    bottom: 4 + progress * 13,
+    zIndex: total - index,
+    transform: [{ rotate: `${-progress * 17}deg` }],
   };
 }
 
 function PlayerSeat({ name, cards, position, active }: { name: string; cards: number; position: "top" | "left" | "right"; active: boolean }) {
+  const isSideSeat = position !== "top";
+  const cardRotation = position === "left" ? "90deg" : "-90deg";
   return (
     <View style={[styles.playerSeat, styles[position], active && styles.activeSeat]}>
       <View style={styles.avatar}><Text style={styles.avatarText}>{name.slice(0, 1)}</Text></View>
-      <View><Text style={styles.playerName}>{name}</Text><View style={styles.cardBacks}>{Array.from({ length: Math.min(cards, 4) }).map((_, index) => <CardBack compact key={`${name}-${index}`} />)}</View></View>
+      <View style={styles.seatDetails}>
+        <Text style={styles.playerName}>{name}</Text>
+        <View style={[styles.cardBacks, isSideSeat ? styles.sideCardBacks : styles.topCardBacks]}>
+          {Array.from({ length: Math.min(cards, 4) }).map((_, index) => (
+            <View key={`${name}-${index}`} style={[isSideSeat ? (index === 0 ? styles.firstSideCard : styles.sideCardStack) : styles.topCardStack, isSideSeat && { transform: [{ rotate: cardRotation }] }]}>
+              <CardBack compact />
+            </View>
+          ))}
+        </View>
+      </View>
     </View>
   );
 }
@@ -111,14 +121,20 @@ const styles = StyleSheet.create({
   contractText: { color: "#F5D889", fontSize: 12, fontWeight: "700", textAlign: "center", writingDirection: "rtl" },
   table: { flex: 1, minHeight: 330, marginTop: 10, borderRadius: 28, backgroundColor: "#16624A", borderWidth: 1, borderColor: "rgba(245,216,137,0.4)", overflow: "hidden" },
   playerSeat: { position: "absolute", flexDirection: "row", alignItems: "center", gap: 5, padding: 6, borderRadius: 16, borderWidth: 1, borderColor: "transparent" },
-  top: { top: 6, alignSelf: "center" },
-  left: { left: 5, top: "46%" },
-  right: { right: 5, top: "46%", flexDirection: "row-reverse" },
+  top: { top: 10, alignSelf: "center", flexDirection: "column", alignItems: "center" },
+  left: { left: 8, top: "42%" },
+  right: { right: 8, top: "42%", flexDirection: "row-reverse" },
   activeSeat: { backgroundColor: "rgba(56,189,248,0.16)", borderColor: "#38BDF8" },
   avatar: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#E3B341", alignItems: "center", justifyContent: "center" },
   avatarText: { color: "#17211D", fontWeight: "900", fontSize: 13 },
+  seatDetails: { alignItems: "center" },
   playerName: { color: "#FFF8E7", fontWeight: "700", fontSize: 12, writingDirection: "rtl" },
-  cardBacks: { flexDirection: "row", marginTop: 3 },
+  cardBacks: { marginTop: 4 },
+  topCardBacks: { flexDirection: "row-reverse", alignSelf: "center" },
+  topCardStack: { marginRight: -8 },
+  sideCardBacks: { alignItems: "center" },
+  firstSideCard: { width: 27, height: 38, alignItems: "center", justifyContent: "center" },
+  sideCardStack: { width: 27, height: 22, marginTop: -16, alignItems: "center", justifyContent: "center" },
   trickArea: { position: "absolute", width: 190, height: 205, alignSelf: "center", top: "28%", left: "50%", transform: [{ translateX: -95 }], borderRadius: 95, borderWidth: 1, borderColor: "rgba(255,248,231,0.18)" },
   playSlot: { position: "absolute" },
   playTop: { top: 8, alignSelf: "center" },
