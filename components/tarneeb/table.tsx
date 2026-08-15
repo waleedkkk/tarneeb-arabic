@@ -1,12 +1,17 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { CardBack, PlayingCard } from "./card";
 import { CurvedCardHand } from "./card-fan";
 import { cardLabel, legalCards, suitName, suitSymbol } from "@/lib/tarneeb/engine";
+import { getNativeTableLayout } from "@/lib/tarneeb/native-ui-layout";
 import type { MatchState } from "@/lib/tarneeb/types";
 import { useEffect } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 
 export function GameTable({ state, onCardPress }: { state: MatchState; onCardPress: (cardId: string) => void }) {
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const nativeLayout = getNativeTableLayout({ width, height, insets });
   const humanTurn = state.phase === "playing" && (state.trick.plays.length === 0 ? state.trick.leaderId === 0 : (state.trick.plays.at(-1)?.playerId ?? 3) === 3);
   const playable = humanTurn ? legalCards(state.players[0].hand, state.trick).map((card) => card.id) : [];
   const cardBySeat = Object.fromEntries(state.trick.plays.map((play) => [play.playerId, play.card]));
@@ -14,8 +19,8 @@ export function GameTable({ state, onCardPress }: { state: MatchState; onCardPre
   const hand = state.players[0].hand;
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.statusRow}>
+    <View style={[styles.screen, { paddingHorizontal: nativeLayout.horizontalPadding }]}> 
+      <View style={[styles.statusRow, { minHeight: nativeLayout.statusHeight }]}>
         <View style={styles.scorePill}>
           <View style={styles.teamHeading}><Text style={styles.scoreLabel}>فريقك</Text><View style={styles.trickBadge}><Text style={styles.trickBadgeValue}>{state.tricksWon[0]}</Text><Text style={styles.trickBadgeLabel}>لمم</Text></View></View>
           <Text style={styles.scoreValue}>{state.scores[0]}</Text>
@@ -27,7 +32,7 @@ export function GameTable({ state, onCardPress }: { state: MatchState; onCardPre
         </View>
       </View>
 
-      <View style={styles.table}>
+      <View style={[styles.table, { minHeight: nativeLayout.tableMinHeight, maxHeight: nativeLayout.tableMaxHeight, marginTop: nativeLayout.tableTopMargin }]}>
         <PlayerSeat name={state.players[2].name} cards={state.players[2].handCount} position="top" active={currentSeat(state) === 2} />
         <PlayerSeat name={state.players[3].name} cards={state.players[3].handCount} position="left" active={currentSeat(state) === 3} />
         <PlayerSeat name={state.players[1].name} cards={state.players[1].handCount} position="right" active={currentSeat(state) === 1} />
@@ -41,7 +46,7 @@ export function GameTable({ state, onCardPress }: { state: MatchState; onCardPre
         </View>
       </View>
 
-      <View style={styles.handArea}>
+      <View style={[styles.handArea, { height: nativeLayout.handAreaHeight, marginTop: nativeLayout.handTopMargin }]}>
         <View style={styles.handHeader}><Text style={styles.handTitle}>أوراقك</Text><Text style={styles.handHint}>{humanTurn ? "اضغط على ورقة متاحة" : "دور الخصم"}</Text></View>
         <CurvedCardHand cards={hand} accessibilityLabel="يدك مرتبة ضمن قوس متساوٍ" entranceStep={26} disabledCardIds={!humanTurn ? hand.map((card) => card.id) : hand.filter((card) => !playable.includes(card.id)).map((card) => card.id)} onCardPress={onCardPress} />
       </View>
