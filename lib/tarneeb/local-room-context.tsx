@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type Socket from "react-native-tcp-socket/lib/types/Socket";
 
 import { useGame } from "./game-context";
-import { roomDetailsToQrData, stateForViewer, type RoomConnectionDetails } from "./local-room-utils";
+import { LOCAL_ROOM_JOIN_TIMEOUT_MS, roomDetailsToQrData, stateForViewer, type RoomConnectionDetails } from "./local-room-utils";
 import {
   LOCAL_ROOM_PORT,
   discoverLocalRooms,
@@ -76,6 +76,12 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
   const roomRef = useRef<RoomConnectionDetails | null>(null);
   const hostNameRef = useRef("");
   const closingRoomRef = useRef(false);
+  const joinTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearJoinTimeout = useCallback(() => {
+    if (joinTimeoutRef.current) clearTimeout(joinTimeoutRef.current);
+    joinTimeoutRef.current = null;
+  }, []);
 
   const isNativeSupported = Platform.OS !== "web";
   const setMemberList = useCallback((next: RoomMember[]) => {
@@ -179,6 +185,7 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
   const joinRoom = useCallback(async (details: RoomConnectionDetails, name: string) => {
     const playerName = name.trim() || "لاعب";
     closingRoomRef.current = false;
+    clearJoinTimeout();
     if (!isNativeSupported) {
       setError("الانضمام إلى غرفة يحتاج نسخة أصلية على هاتف Android أو iPhone.");
       setStatus("error");
@@ -191,29 +198,35 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
     roomRef.current = details;
     clientRef.current?.disconnect();
     clientRef.current = null;
+    let timedOut = false;
     try {
       let client: LocalRoomClient;
       let rejectedByHost = false;
       client = new LocalRoomClient({
         onConnect: () => client.send({ type: "hello", protocol: PROTOCOL_VERSION, roomId: details.roomId, key: details.key, name: playerName }),
         onClose: () => {
-          if (!closingRoomRef.current && !rejectedByHost) {
+          clearJoinTimeout();
+          if (!closingRoomRef.current && !rejectedByHost && !timedOut) {
             setStatus("error");
             setError("انقطع الاتصال بمضيف الغرفة.");
           }
         },
         onError: (message) => {
+          clearJoinTimeout();
+          if (timedOut) return;
           setStatus("error");
           setError(`تعذر الاتصال بالمضيف: ${message}`);
         },
         onMessage: (message) => {
           if (message.type === "error" && typeof message.message === "string") {
+            clearJoinTimeout();
             rejectedByHost = true;
             setStatus("error");
             setError(message.message);
             return;
           }
           if (message.type === "welcome" && typeof message.seat === "number" && SEATS.includes(message.seat as Seat)) {
+            clearJoinTimeout();
             setLocalSeat(message.seat as Seat);
             setStatus("ready");
             return;
@@ -230,15 +243,27 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
           }
         },
       });
+      clientRef.current = client;
+      joinTimeoutRef.current = setTimeout(() => {
+        timedOut = true;
+        client.disconnect();
+        if (clientRef.current === client) clientRef.current = null;
+        setStatus("error");
+        setError("انتهت مهلة الاتصال. تأكد من بقاء جهاز المضيف مفتوحًا وأن الأجهزة على الشبكة المحلية نفسها، ثم حاول مجددًا.");
+        clearJoinTimeout();
+      }, LOCAL_ROOM_JOIN_TIMEOUT_MS);
       await client.connect(details.host, details.port);
       clientRef.current = client;
     } catch (cause) {
-      setStatus("error");
-      setError(cause instanceof Error ? cause.message : "تعذر الانضمام إلى الغرفة.");
+      clearJoinTimeout();
+      if (!timedOut) {
+        setStatus("error");
+        setError(cause instanceof Error ? cause.message : "تعذر الانضمام إلى الغرفة.");
+      }
       clientRef.current?.disconnect();
       clientRef.current = null;
     }
-  }, [game, isNativeSupported, setMemberList, status]);
+  }, [clearJoinTimeout, game, isNativeSupported, setMemberList]);
 
   const broadcastGameState = useCallback(() => {
     if (role !== "host" || !hostRef.current || game.state.phase === "home") return;
@@ -268,6 +293,7 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
 
   const leaveRoom = useCallback(async () => {
     closingRoomRef.current = true;
+    clearJoinTimeout();
     stopDiscoveringRef.current?.();
     stopDiscoveringRef.current = null;
     stopPublishingRef.current?.();
@@ -284,7 +310,7 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
     setRoomDetails(null);
     setError(null);
     setDiscoveredRooms([]);
-  }, []);
+  }, [clearJoinTimeout]);
 
   const discoverRooms = useCallback(() => {
     if (!isNativeSupported) return;
@@ -332,11 +358,12 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
   }, [game, role]);
 
   useEffect(() => () => {
+    clearJoinTimeout();
     stopDiscoveringRef.current?.();
     stopPublishingRef.current?.();
     clientRef.current?.disconnect();
     void hostRef.current?.stop();
-  }, []);
+  }, [clearJoinTimeout]);
 
   const value = useMemo<LocalRoomContextValue>(() => ({
     status,

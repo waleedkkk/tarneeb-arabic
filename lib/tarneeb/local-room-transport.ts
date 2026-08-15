@@ -2,6 +2,8 @@ import { Platform } from "react-native";
 import type Server from "react-native-tcp-socket/lib/types/Server";
 import type Socket from "react-native-tcp-socket/lib/types/Socket";
 
+import { LOCAL_ROOM_JOIN_TIMEOUT_MS } from "./local-room-utils";
+
 export const LOCAL_ROOM_PORT = 42872;
 
 export type LocalRoomSocketMessage = Record<string, unknown> & { type: string };
@@ -136,7 +138,7 @@ export class LocalRoomClient {
 
     await new Promise<void>((resolve, reject) => {
       let connected = false;
-      const socket = tcp.createConnection({ host, port, connectTimeout: 8000 }, () => {
+      const socket = tcp.createConnection({ host, port, connectTimeout: LOCAL_ROOM_JOIN_TIMEOUT_MS + 1000 }, () => {
         connected = true;
         this.socket = socket;
         socket.setEncoding("utf8");
@@ -145,6 +147,7 @@ export class LocalRoomClient {
         this.handlers.onConnect();
         resolve();
       });
+      this.socket = socket;
       socket.on("data", (chunk: string | Uint8Array) => {
         this.buffer = parseChunk(chunk, this.buffer, this.handlers.onMessage);
       });

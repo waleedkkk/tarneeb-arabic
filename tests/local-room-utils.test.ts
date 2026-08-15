@@ -1,5 +1,5 @@
 import { createHomeState, createNetworkRound } from "../lib/tarneeb/engine";
-import { parseRoomQrData, roomDetailsToQrData, stateForViewer, validateRoomQrData } from "../lib/tarneeb/local-room-utils";
+import { LOCAL_ROOM_JOIN_TIMEOUT_MS, parseRoomQrData, roomConnectionCountdownCopy, roomDetailsToQrData, stateForViewer, validateRoomQrData } from "../lib/tarneeb/local-room-utils";
 import { describe, expect, it } from "vitest";
 
 describe("الغرفة المحلية", () => {
@@ -32,5 +32,12 @@ describe("الغرفة المحلية", () => {
     expect(validateRoomQrData("https://example.com").message).toContain("ليس رمز غرفة طرنيب");
     expect(validateRoomQrData("tarneeb://local?host=999.1.1.1&port=42872&room=A&key=B").message).toContain("عنوان شبكة محلية");
     expect(validateRoomQrData("tarneeb://local?host=192.168.1.1&port=80&room=A&key=B").message).toContain("منفذ اتصال");
+  });
+
+  it("يحدد مهلة اتصال مفهومة ويصوغ العد التنازلي للمستخدم", () => {
+    expect(LOCAL_ROOM_JOIN_TIMEOUT_MS).toBe(12_000);
+    expect(roomConnectionCountdownCopy(12_000)).toContain("12");
+    expect(roomConnectionCountdownCopy(1)).toContain("1");
+    expect(roomConnectionCountdownCopy(0)).toContain("انتهت");
   });
 });

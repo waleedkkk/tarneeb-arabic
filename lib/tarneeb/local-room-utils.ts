@@ -3,6 +3,14 @@ import type { MatchState, Seat, Team } from "./types";
 
 const SEATS: Seat[] = [0, 1, 2, 3];
 
+/** المهلة الظاهرة للمستخدم قبل إيقاف محاولة الانضمام للغرفة. */
+export const LOCAL_ROOM_JOIN_TIMEOUT_MS = 12_000;
+
+export function roomConnectionCountdownCopy(millisecondsRemaining: number) {
+  const seconds = Math.max(0, Math.ceil(millisecondsRemaining / 1000));
+  return seconds === 0 ? "انتهت مهلة الاتصال" : `تنتهي المحاولة خلال ${seconds} ث`;
+}
+
 export interface RoomConnectionDetails {
   host: string;
   port: number;
