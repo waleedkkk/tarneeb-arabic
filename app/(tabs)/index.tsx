@@ -1,4 +1,5 @@
-import { FlatList, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { FlatList, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
 import { useGame } from "@/lib/tarneeb/game-context";
 import { legalCards, suitName, suitStrength, suitSymbol } from "@/lib/tarneeb/engine";
 import type { Suit } from "@/lib/tarneeb/types";
@@ -82,7 +83,7 @@ function Bidding() {
           />
         </View>
         <View style={styles.strengthPanel} accessibilityLabel="مؤشر قوة أنواع أوراقك">
-          <View style={styles.strengthHeader}><View><Text style={styles.strengthTitle}>قوة الأنواع</Text><Text style={styles.strengthDescription}>تُحسب من عدد الأوراق وA وK وQ وJ و10</Text></View><Text style={styles.strengthSuggestion}>الأقوى: {suitName(strongest.suit)}</Text></View>
+          <View style={styles.strengthHeader}><View><View style={styles.strengthTitleRow}><Text style={styles.strengthTitle}>قوة الأنواع</Text><StrengthInfoButton /></View><Text style={styles.strengthDescription}>تُحسب من عدد الأوراق وA وK وQ وJ و10</Text></View><Text style={styles.strengthSuggestion}>الأقوى: {suitName(strongest.suit)}</Text></View>
           <View style={styles.strengthGrid}>{strengths.map((strength) => <SuitStrengthCard key={strength.suit} {...strength} />)}</View>
         </View>
         <Text style={styles.sectionTitle}>{isHumanTurn ? "اختر عرضك" : "يفكر الخصوم في المزايدة…"}</Text>
@@ -105,7 +106,7 @@ function TrumpSelection() {
         <Text style={styles.kicker}>الطلب {state.bidding.highestBid}</Text>
         <Text style={styles.pageTitle}>{humanIsBidder ? "اختر الطرنيب" : "يختار الخصم الطرنيب"}</Text>
         <Text style={styles.pageSubtitle}>{humanIsBidder ? "حدد النوع الذي يمنح فريقك أفضل فرصة للفوز باللمم." : `${state.players[state.bidding.highestBidder!].name} يراجع أوراقه…`}</Text>
-        {humanIsBidder && <View style={styles.trumpStrengthPanel}><Text style={styles.trumpStrengthTitle}>مؤشر قوة أوراقك</Text><View style={styles.strengthGrid}>{strengths.map((strength) => <SuitStrengthCard key={strength.suit} {...strength} />)}</View></View>}
+        {humanIsBidder && <View style={styles.trumpStrengthPanel}><View style={styles.strengthTitleRow}><Text style={styles.trumpStrengthTitle}>مؤشر قوة أوراقك</Text><StrengthInfoButton /></View><View style={styles.strengthGrid}>{strengths.map((strength) => <SuitStrengthCard key={strength.suit} {...strength} />)}</View></View>}
         <View style={styles.suitGrid}>{SUITS.map((suit) => <Pressable key={suit} disabled={!humanIsBidder} onPress={() => game.selectHumanTrump(suit)} style={({ pressed }) => [styles.suitButton, pressed && humanIsBidder && styles.buttonPressed, !humanIsBidder && styles.buttonDisabled]}><Text style={[styles.suitSymbol, (suit === "hearts" || suit === "diamonds") && styles.suitRed]}>{suitSymbol(suit)}</Text><Text style={styles.suitName}>{suitName(suit)}</Text></Pressable>)}</View>
       </ScrollView>
     </SafeAreaView>
@@ -145,6 +146,11 @@ function PrimaryButton({ label, onPress, large = false }: { label: string; onPre
 
 function NumberButton({ label, disabled, onPress }: { label: string; disabled: boolean; onPress: () => void }) {
   return <Pressable disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.numberButton, pressed && !disabled && styles.buttonPressed, disabled && styles.buttonDisabled]}><Text style={styles.numberText}>{label}</Text></Pressable>;
+}
+
+function StrengthInfoButton() {
+  const [visible, setVisible] = useState(false);
+  return <><Pressable accessibilityRole="button" accessibilityLabel="شرح احتساب قوة الأنواع" onPress={() => setVisible(true)} style={({ pressed }) => [styles.infoButton, pressed && styles.infoButtonPressed]}><Text style={styles.infoButtonText}>i</Text></Pressable><Modal transparent visible={visible} animationType="fade" onRequestClose={() => setVisible(false)}><View style={styles.infoModal}><Pressable accessibilityLabel="إغلاق الشرح" style={styles.infoBackdrop} onPress={() => setVisible(false)} /><View style={styles.infoSheet}><View style={styles.infoSheetHeader}><View><Text style={styles.infoTitle}>كيف نحسب قوة النوع؟</Text><Text style={styles.infoIntro}>هذا مؤشر إرشادي يساعدك على مقارنة أنواع يدك قبل اختيار الطرنيب.</Text></View><Pressable accessibilityLabel="إغلاق" onPress={() => setVisible(false)} style={styles.infoClose}><Text style={styles.infoCloseText}>×</Text></Pressable></View><View style={styles.infoSection}><Text style={styles.infoSectionTitle}>أولًا: عدد الأوراق</Text><Text style={styles.infoBody}>كل ورقة من النوع تضيف نقطتين. ويُضاف +2 عند امتلاك 5 أو 6 أوراق، و+4 عند امتلاك 7 أوراق أو أكثر.</Text></View><View style={styles.infoSection}><Text style={styles.infoSectionTitle}>ثانيًا: الأوراق العالية</Text><View style={styles.rankPoints}><Text style={styles.rankPoint}>A = 5</Text><Text style={styles.rankPoint}>K = 4</Text><Text style={styles.rankPoint}>Q = 3</Text><Text style={styles.rankPoint}>J = 2</Text><Text style={styles.rankPoint}>10 = 1</Text></View></View><View style={styles.infoLevels}><Text style={styles.infoLevelsTitle}>المستويات</Text><Text style={styles.infoLevel}>محدود: أقل من 10</Text><Text style={styles.infoLevel}>متوسط: من 10 إلى 17</Text><Text style={styles.infoLevel}>قوي: 18 فأكثر</Text></View><Text style={styles.infoFootnote}>الأشرطة الخمسة تلخص إجمالي القوة بصريًا؛ وهي ليست ضمانًا للفوز، بل أداة للمقارنة بين الأنواع.</Text><Pressable onPress={() => setVisible(false)} style={({ pressed }) => [styles.infoDone, pressed && styles.buttonPressed]}><Text style={styles.infoDoneText}>فهمت</Text></Pressable></View></View></Modal></>;
 }
 
 function SuitStrengthCard({ suit, count, highCount, bars, label }: ReturnType<typeof suitStrength>) {
@@ -196,6 +202,7 @@ const styles = StyleSheet.create({
   biddingHandList: { paddingHorizontal: 12, gap: 4, paddingBottom: 5 },
   strengthPanel: { backgroundColor: "rgba(56,189,248,0.09)", borderWidth: 1, borderColor: "rgba(56,189,248,0.28)", borderRadius: 20, marginTop: 14, padding: 14 },
   strengthHeader: { flexDirection: "row-reverse", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 12 },
+  strengthTitleRow: { flexDirection: "row-reverse", alignItems: "center", alignSelf: "flex-start", gap: 6 },
   strengthTitle: { color: "#FFF8E7", fontSize: 16, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
   strengthDescription: { color: "#B4D6C7", fontSize: 10, marginTop: 3, textAlign: "right", writingDirection: "rtl" },
   strengthSuggestion: { color: "#8DDBFF", backgroundColor: "rgba(56,189,248,0.15)", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 5, fontSize: 11, fontWeight: "800", textAlign: "center", writingDirection: "rtl" },
@@ -212,6 +219,28 @@ const styles = StyleSheet.create({
   strengthBar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: "rgba(255,248,231,0.15)" },
   strengthBarActive: { backgroundColor: "#38BDF8" },
   strengthDetail: { color: "#B4D6C7", fontSize: 10, marginTop: 6, textAlign: "right", writingDirection: "rtl" },
+  infoButton: { width: 22, height: 22, borderRadius: 11, borderWidth: 1, borderColor: "#8DDBFF", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(56,189,248,0.13)" },
+  infoButtonPressed: { opacity: 0.72, transform: [{ scale: 0.94 }] },
+  infoButtonText: { color: "#8DDBFF", fontSize: 14, fontWeight: "900", lineHeight: 17 },
+  infoModal: { flex: 1, justifyContent: "center", padding: 20 },
+  infoBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(3,20,14,0.78)" },
+  infoSheet: { backgroundColor: "#FFF8E7", borderRadius: 24, padding: 20, maxWidth: 420, alignSelf: "center", shadowColor: "#000", shadowOpacity: 0.35, shadowRadius: 16, elevation: 10 },
+  infoSheetHeader: { flexDirection: "row-reverse", gap: 14, justifyContent: "space-between", alignItems: "flex-start" },
+  infoTitle: { color: "#0E3B2E", fontSize: 20, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
+  infoIntro: { color: "#52635C", fontSize: 12, lineHeight: 18, marginTop: 4, textAlign: "right", writingDirection: "rtl", maxWidth: 285 },
+  infoClose: { width: 30, height: 30, borderRadius: 15, backgroundColor: "#E5E7EB", alignItems: "center", justifyContent: "center" },
+  infoCloseText: { color: "#52635C", fontSize: 24, lineHeight: 26 },
+  infoSection: { borderTopWidth: 1, borderTopColor: "#E7E0CE", paddingTop: 12, marginTop: 12 },
+  infoSectionTitle: { color: "#0E3B2E", fontSize: 14, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
+  infoBody: { color: "#52635C", fontSize: 12, lineHeight: 19, textAlign: "right", marginTop: 4, writingDirection: "rtl" },
+  rankPoints: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 6, marginTop: 8 },
+  rankPoint: { color: "#0E3B2E", backgroundColor: "#E6F4FE", borderRadius: 9, paddingHorizontal: 8, paddingVertical: 4, fontSize: 12, fontWeight: "800" },
+  infoLevels: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 6, alignItems: "center", borderTopWidth: 1, borderTopColor: "#E7E0CE", paddingTop: 12, marginTop: 12 },
+  infoLevelsTitle: { color: "#0E3B2E", fontSize: 13, fontWeight: "900", writingDirection: "rtl", marginLeft: 2 },
+  infoLevel: { color: "#52635C", backgroundColor: "#F2ECDD", borderRadius: 9, paddingHorizontal: 7, paddingVertical: 4, fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
+  infoFootnote: { color: "#52635C", fontSize: 11, lineHeight: 17, textAlign: "right", marginTop: 14, writingDirection: "rtl" },
+  infoDone: { minHeight: 44, borderRadius: 13, backgroundColor: "#0E3B2E", marginTop: 16, alignItems: "center", justifyContent: "center" },
+  infoDoneText: { color: "#FFF8E7", fontSize: 14, fontWeight: "900", writingDirection: "rtl" },
   sectionTitle: { color: "#FFF8E7", fontSize: 22, fontWeight: "900", textAlign: "right", marginTop: 28, writingDirection: "rtl" },
   sectionText: { color: "#B4D6C7", textAlign: "right", fontSize: 13, marginTop: 4, writingDirection: "rtl" },
   bidGrid: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 9, marginTop: 18, justifyContent: "center" },
