@@ -7,7 +7,7 @@ import { useLocalRoom } from "@/lib/tarneeb/local-room-context";
 import { LOCAL_ROOM_JOIN_TIMEOUT_MS, roomConnectionCountdownCopy, validateRoomQrData } from "@/lib/tarneeb/local-room-utils";
 
 type Mode = "menu" | "create" | "host" | "join" | "scanner";
-type JoinErrorAction = "scan" | "permission" | null;
+type JoinErrorAction = "retry" | "scan" | "permission" | null;
 
 export function LocalRoomSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const room = useLocalRoom();
@@ -45,7 +45,7 @@ export function LocalRoomSheet({ visible, onClose }: { visible: boolean; onClose
     const interval = setInterval(update, 250);
     const timeout = setTimeout(() => {
       setJoinError("انتهت مهلة الاتصال. تأكد من اتصال الأجهزة بالشبكة نفسها ومن بقاء غرفة المضيف مفتوحة، ثم حاول مجددًا.");
-      setJoinErrorAction(null);
+      setJoinErrorAction("retry");
       void leaveRoom();
     }, LOCAL_ROOM_JOIN_TIMEOUT_MS);
     return () => {
@@ -117,8 +117,8 @@ export function LocalRoomSheet({ visible, onClose }: { visible: boolean; onClose
   };
 
   const visibleJoinError = joinError ?? (mode === "join" ? room.error : null);
-  const retryErrorAction = joinErrorAction === "scan" ? () => void scan() : joinErrorAction === "permission" ? () => void scan() : roomCode.trim() ? () => void join() : undefined;
-  const retryErrorLabel = joinErrorAction === "scan" ? "إعادة المسح" : joinErrorAction === "permission" ? "طلب الإذن مجددًا" : "حاول مجددًا";
+  const retryErrorAction = joinErrorAction === "scan" ? () => void scan() : joinErrorAction === "permission" ? () => void scan() : joinErrorAction === "retry" || roomCode.trim() ? () => void join() : undefined;
+  const retryErrorLabel = joinErrorAction === "scan" ? "إعادة المسح" : joinErrorAction === "permission" ? "طلب الإذن مجددًا" : "إعادة المحاولة";
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => void closeOrLeave()}>
