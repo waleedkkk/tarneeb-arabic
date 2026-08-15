@@ -5,6 +5,7 @@ export type Seat = 0 | 1 | 2 | 3;
 export type Team = 0 | 1;
 export type GamePhase = "home" | "bidding" | "trump" | "playing" | "trickResult" | "roundResult";
 export type MatchMode = "solo" | "localRoom";
+export type CardFanCurve = "gentle" | "balanced" | "deep";
 
 export interface Card {
   id: string;
@@ -61,6 +62,7 @@ export interface GameSettings {
   hapticsEnabled: boolean;
   soundEnabled: boolean;
   showStrengthIndicator: boolean;
+  cardFanCurve: CardFanCurve;
 }
 
 export interface MatchState {

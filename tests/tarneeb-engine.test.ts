@@ -56,7 +56,8 @@ describe("محرك طرنيب", () => {
     expect(spades.bars).toBeGreaterThan(hearts.bars);
   });
 
-  it("يبقي مؤشر القوة ظاهرًا افتراضيًا مع إمكان تعطيله من الإعدادات", () => {
+  it("يضبط تفضيلات العرض الافتراضية بصورة آمنة", () => {
     expect(DEFAULT_SETTINGS.showStrengthIndicator).toBe(true);
+    expect(DEFAULT_SETTINGS.cardFanCurve).toBe("balanced");
   });
 });

@@ -1,3 +1,5 @@
+import type { CardFanCurve } from "./types";
+
 export interface FanCardPosition {
   left: number;
   bottom: number;
@@ -65,21 +67,32 @@ export function getBalancedFanCardPosition(
   fanWidth: number,
   cardFootprint = STANDARD_CARD_FOOTPRINT,
   compact = false,
+  curveStrength: CardFanCurve = "balanced",
 ): FanCardPosition {
   const cardCount = Math.max(total, 1);
   const safeIndex = Math.min(Math.max(index, 0), cardCount - 1);
   const progress = cardCount === 1 ? 0.5 : safeIndex / (cardCount - 1);
   const usableWidth = Math.max(fanWidth - cardFootprint, 0);
-  const left = cardCount === 1 ? usableWidth / 2 : (safeIndex / (cardCount - 1)) * usableWidth;
+  const naturalStep = compact ? 20 : 28;
+  const spreadWidth = Math.min(usableWidth, Math.max(0, (cardCount - 1) * naturalStep));
+  const left = cardCount === 1
+    ? usableWidth / 2
+    : (usableWidth - spreadWidth) / 2 + progress * spreadWidth;
   const baseline = compact ? 2 : 4;
-  const curveLift = compact ? 11 : 16;
-  const maxRotation = compact ? 7 : 10;
+  const curve = {
+    gentle: { lift: 10, rotation: 6 },
+    balanced: { lift: 16, rotation: 10 },
+    deep: { lift: 22, rotation: 14 },
+  }[curveStrength];
+  const compactScale = compact ? 0.7 : 1;
+  const curveLift = curve.lift * compactScale;
+  const maxRotation = curve.rotation * compactScale;
   const centeredProgress = progress - 0.5;
-  const curve = 1 - Math.abs(centeredProgress * 2);
+  const curveProgress = 1 - Math.abs(centeredProgress * 2);
 
   return {
     left,
-    bottom: baseline + curve * curveLift,
+    bottom: baseline + curveProgress * curveLift,
     rotation: centeredProgress * maxRotation,
     zIndex: 10 + safeIndex,
   };

@@ -26,7 +26,7 @@ export default function GameScreen() {
 
   return (
     <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
-      <GameTable action={<MatchActions />} state={state} onCardPress={(cardId) => {
+      <GameTable action={<MatchActions />} fanCurve={game.settings.cardFanCurve} state={state} onCardPress={(cardId) => {
         const card = state.players[0].hand.find((item) => item.id === cardId);
         if (card && legalCards(state.players[0].hand, state.trick).some((item) => item.id === card.id)) {
           if (isNetworkMatch) room.requestCard(card.id);
@@ -133,7 +133,7 @@ function Bidding() {
         <View style={styles.playerStrip}>{state.players.map((player) => <View key={player.id} style={[styles.playerChip, state.bidding.currentPlayer === player.id && styles.playerChipActive, !state.bidding.activeSeats[player.id] && styles.playerChipPassed]}><Text style={styles.playerChipText}>{player.name}</Text><Text style={styles.playerChipSub}>{state.bidding.activeSeats[player.id] ? (state.bidding.currentPlayer === player.id ? "دوره" : "بالانتظار") : "مرّ"}</Text></View>)}</View>
         <View style={styles.biddingHand} accessibilityLabel="أوراقك الحالية للمزايدة">
           <View style={styles.biddingHandHeader}><View><Text style={styles.biddingHandTitle}>أوراقك</Text><Text style={styles.biddingHandHint}>اسحب لمراجعة جميع الأوراق قبل الطلب</Text></View><Text style={styles.biddingHandCount}>{state.players[0].hand.length} ورقة</Text></View>
-          <CurvedCardHand cards={state.players[0].hand} accessibilityLabel="أوراقك الحالية مرتبة ضمن قوس متساوٍ للمزايدة" />
+          <CurvedCardHand cards={state.players[0].hand} curveStrength={game.settings.cardFanCurve} accessibilityLabel="أوراقك الحالية مرتبة ضمن قوس متساوٍ للمزايدة" />
         </View>
         {game.settings.showStrengthIndicator && <View style={styles.strengthPanel} accessibilityLabel="مؤشر قوة أنواع أوراقك">
           <View style={styles.strengthHeader}><View><View style={styles.strengthTitleRow}><Text style={styles.strengthTitle}>قوة الأنواع</Text><StrengthInfoButton /></View><Text style={styles.strengthDescription}>تُحسب من عدد الأوراق وA وK وQ وJ و10</Text></View><Text style={styles.strengthSuggestion}>الأقوى: {suitName(strongest.suit)}</Text></View>

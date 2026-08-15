@@ -24,6 +24,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   hapticsEnabled: true,
   soundEnabled: true,
   showStrengthIndicator: true,
+  cardFanCurve: "balanced",
 };
 
 export function teamOf(seat: Seat): Team {

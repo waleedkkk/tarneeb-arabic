@@ -25,11 +25,13 @@ describe("balanced card hand layout", () => {
 
   it("uses compact cards and remains within a narrow 320px phone viewport", () => {
     const metrics = getResponsiveFanMetrics(320);
+    const firstCard = getBalancedFanCardPosition(0, 13, metrics.fanWidth, metrics.cardFootprint, metrics.compact);
     const finalCard = getBalancedFanCardPosition(12, 13, metrics.fanWidth, metrics.cardFootprint, metrics.compact);
 
     expect(metrics.compact).toBe(true);
     expect(metrics.fanWidth).toBeLessThanOrEqual(320);
-    expect(finalCard.left + metrics.cardFootprint).toBe(metrics.fanWidth);
+    expect(finalCard.left + metrics.cardFootprint).toBeLessThanOrEqual(metrics.fanWidth);
+    expect(firstCard.left).toBe(metrics.fanWidth - (finalCard.left + metrics.cardFootprint));
   });
 
   it("keeps the compact hand balanced on a narrow display", () => {
@@ -41,6 +43,31 @@ describe("balanced card hand layout", () => {
     expect(center.bottom).toBeGreaterThan(left.bottom);
     expect(left.bottom).toBe(right.bottom);
     expect(left.rotation).toBe(-right.rotation);
+  });
+
+  it("centers a smaller hand while allowing a full hand to use the available fan width", () => {
+    const fewFirst = getBalancedFanCardPosition(0, 5, 340);
+    const fewLast = getBalancedFanCardPosition(4, 5, 340);
+    const fullFirst = getBalancedFanCardPosition(0, 13, 340);
+    const fullLast = getBalancedFanCardPosition(12, 13, 340);
+
+    expect(fewFirst.left).toBeGreaterThan(0);
+    expect(fewLast.left + 64).toBeLessThan(340);
+    expect(fewFirst.left).toBe(340 - (fewLast.left + 64));
+    expect(fullFirst.left).toBe(0);
+    expect(fullLast.left + 64).toBe(340);
+  });
+
+  it("changes the height and rotation of the even arc for each curve preference", () => {
+    const gentle = getBalancedFanCardPosition(3, 7, 340, 64, false, "gentle");
+    const balanced = getBalancedFanCardPosition(3, 7, 340, 64, false, "balanced");
+    const deep = getBalancedFanCardPosition(3, 7, 340, 64, false, "deep");
+    const gentleEdge = getBalancedFanCardPosition(0, 7, 340, 64, false, "gentle");
+    const deepEdge = getBalancedFanCardPosition(0, 7, 340, 64, false, "deep");
+
+    expect(gentle.bottom).toBeLessThan(balanced.bottom);
+    expect(balanced.bottom).toBeLessThan(deep.bottom);
+    expect(Math.abs(gentleEdge.rotation)).toBeLessThan(Math.abs(deepEdge.rotation));
   });
 
   it("expands compact fan edge hit areas only toward the exposed side", () => {
