@@ -30,6 +30,10 @@ export const NATIVE_LAYOUT_DIRECTION = {
 export function getNativeTableLayout({ width, height, insets }: NativeViewport) {
   const compact = width <= 375;
   const contentHeight = Math.max(0, height - insets.top - insets.bottom);
+  // بعض حاويات المعاينة لا تمرّر inset أعلى رغم وجود شريط حالة أو فتحة شاشة.
+  // نحجز مساحة مرئية بديلة فقط عندما لا يتوفر inset أصلي.
+  const topSafeFallback = insets.top === 0 ? (compact ? 44 : 48) : 0;
+  const playableContentHeight = Math.max(0, contentHeight - topSafeFallback);
   const horizontalPadding = compact ? 12 : 14;
   const statusHeight = compact ? 46 : 50;
   const handAreaHeight = compact ? 132 : 140;
@@ -37,10 +41,12 @@ export function getNativeTableLayout({ width, height, insets }: NativeViewport) 
   const handTopMargin = 10;
   const tableMinHeight = 330;
   const reservedHeight = statusHeight + tableTopMargin + handTopMargin + handAreaHeight;
-  const tableMaxHeight = Math.max(tableMinHeight, contentHeight - reservedHeight);
+  const tableMaxHeight = Math.max(tableMinHeight, playableContentHeight - reservedHeight);
 
   return {
     contentHeight,
+    topSafeFallback,
+    playableContentHeight,
     horizontalPadding,
     statusHeight,
     handAreaHeight,

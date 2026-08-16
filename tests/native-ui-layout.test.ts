@@ -8,8 +8,17 @@ describe("native Android table layout", () => {
     expect(layout.contentHeight).toBe(viewport.height - viewport.insets.top - viewport.insets.bottom);
     expect(layout.tableMaxHeight + layout.reservedHeight).toBeLessThanOrEqual(layout.contentHeight);
     expect(layout.tableMaxHeight).toBeGreaterThanOrEqual(layout.tableMinHeight);
+    expect(layout.topSafeFallback).toBe(0);
     expect(layout.handAreaHeight).toBeGreaterThan(120);
     expect(layout.horizontalPadding).toBeGreaterThanOrEqual(12);
+  });
+
+  it("reserves a visual top guard when the host does not expose safe-area insets", () => {
+    const layout = getNativeTableLayout({ width: 390, height: 844, insets: { top: 0, bottom: 0, left: 0, right: 0 } });
+
+    expect(layout.topSafeFallback).toBe(48);
+    expect(layout.playableContentHeight).toBe(layout.contentHeight - layout.topSafeFallback);
+    expect(layout.tableMaxHeight + layout.reservedHeight).toBeLessThanOrEqual(layout.playableContentHeight);
   });
 
   it("uses controlled LTR geometry with explicit RTL rows, preventing native double mirroring", () => {

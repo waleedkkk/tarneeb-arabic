@@ -16,17 +16,24 @@ export function GameTable({ state, onCardPress, action, fanCurve, cardBackPatter
   const playable = humanTurn ? legalCards(state.players[0].hand, state.trick).map((card) => card.id) : [];
   const cardBySeat = Object.fromEntries(state.trick.plays.map((play) => [play.playerId, play.card]));
   const trump = state.bidding.trumpSuit;
+  const bidder = state.bidding.highestBidder === null ? null : state.players[state.bidding.highestBidder];
   const hand = state.players[0].hand;
   const [draggingCard, setDraggingCard] = useState(false);
 
   return (
-    <View style={[styles.screen, { paddingHorizontal: nativeLayout.horizontalPadding }]}> 
+    <View style={[styles.screen, { paddingHorizontal: nativeLayout.horizontalPadding, paddingTop: nativeLayout.topSafeFallback }]}> 
       <View style={[styles.statusRow, { minHeight: nativeLayout.statusHeight }]}>
         <View style={styles.scorePill}>
           <View style={styles.teamHeading}><Text style={styles.scoreLabel}>فريقك</Text><View style={styles.trickBadge}><Text style={styles.trickBadgeValue}>{state.tricksWon[0]}</Text><Text style={styles.trickBadgeLabel}>لمم</Text></View></View>
           <Text style={styles.scoreValue}>{state.scores[0]}</Text>
         </View>
-        <View style={styles.contractPill}>{action}<Text style={styles.contractText}>الطلب {state.bidding.highestBid} · {trump ? `${suitName(trump)} ${suitSymbol(trump)}` : "بانتظار الطرنيب"}</Text></View>
+        <View style={styles.contractPill}>
+          {action}
+          <View style={styles.contractCopy}>
+            <Text numberOfLines={1} style={styles.contractText}>{trump ? `الطرنيب: ${suitName(trump)} ${suitSymbol(trump)}` : "بانتظار اختيار الطرنيب"}</Text>
+            <Text numberOfLines={1} style={styles.contractBidder}>{bidder ? `طلبه ${bidder.name} · الطلب ${state.bidding.highestBid}` : "لم يُحسم صاحب الطلب بعد"}</Text>
+          </View>
+        </View>
         <View style={styles.scorePill}>
           <View style={styles.teamHeading}><Text style={styles.scoreLabel}>الخصم</Text><View style={styles.trickBadge}><Text style={styles.trickBadgeValue}>{state.tricksWon[1]}</Text><Text style={styles.trickBadgeLabel}>لمم</Text></View></View>
           <Text style={styles.scoreValue}>{state.scores[1]}</Text>
@@ -179,8 +186,10 @@ const styles = StyleSheet.create({
   trickBadge: { flexDirection: "row", alignItems: "baseline", gap: 2, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 9, backgroundColor: "#E3B341" },
   trickBadgeValue: { color: "#173C2F", fontSize: 12, fontWeight: "900" },
   trickBadgeLabel: { color: "#173C2F", fontSize: 9, fontWeight: "900" },
-  contractPill: { flex: 1, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 5, paddingHorizontal: 4 },
-  contractText: { flexShrink: 1, color: "#F5D889", fontSize: 12, fontWeight: "700", textAlign: "center", writingDirection: "rtl" },
+  contractPill: { flex: 1, minHeight: 48, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 7, paddingHorizontal: 7, borderWidth: 1, borderColor: "rgba(227,179,65,0.4)", borderRadius: 14, backgroundColor: "rgba(14,59,46,0.42)" },
+  contractCopy: { flex: 1, alignItems: "center", justifyContent: "center", minWidth: 0 },
+  contractText: { alignSelf: "stretch", flexShrink: 1, color: "#F5D889", fontSize: 12, fontWeight: "900", lineHeight: 16, textAlign: "center", writingDirection: "rtl" },
+  contractBidder: { alignSelf: "stretch", flexShrink: 1, color: "#D9EEE4", fontSize: 10, fontWeight: "700", lineHeight: 13, textAlign: "center", writingDirection: "rtl" },
   table: { flex: 1, minHeight: 330, marginTop: 10, borderRadius: 28, backgroundColor: "#16624A", borderWidth: 1, borderColor: "rgba(245,216,137,0.4)", overflow: "hidden" },
   playerSeat: { position: "absolute", flexDirection: "row", alignItems: "center", gap: 5, padding: 6, borderRadius: 16, borderWidth: 1, borderColor: "transparent" },
   top: { top: 10, alignSelf: "center", flexDirection: "column", alignItems: "center" },
