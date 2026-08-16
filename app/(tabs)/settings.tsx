@@ -2,7 +2,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-nat
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useGame } from "@/lib/tarneeb/game-context";
 import { CardBack } from "@/components/tarneeb/card";
-import type { CardBackPattern, CardFanCurve } from "@/lib/tarneeb/types";
+import type { CardBackPattern, CardFanCurve, TableTextSize } from "@/lib/tarneeb/types";
 
 const CARD_FAN_CURVES: { value: CardFanCurve; label: string }[] = [
   { value: "gentle", label: "خفيف" },
@@ -13,6 +13,10 @@ const CARD_BACK_PATTERNS: { value: CardBackPattern; label: string }[] = [
   { value: "royal", label: "ملكي" },
   { value: "navy", label: "شبكي" },
   { value: "emerald", label: "تراثي" },
+];
+const TABLE_TEXT_SIZES: { value: TableTextSize; label: string }[] = [
+  { value: "normal", label: "عادي" },
+  { value: "large", label: "كبير" },
 ];
 
 export default function SettingsScreen() {
@@ -27,6 +31,7 @@ export default function SettingsScreen() {
         <Section title="التغذية الراجعة"><ToggleRow label="الاهتزاز للمسات المهمة" description="عند بدء الجولة ولعب الورق والنتائج." value={settings.hapticsEnabled} onChange={(hapticsEnabled) => updateSettings({ hapticsEnabled })} /><ToggleRow label="المؤثرات الصوتية" description="أصوات خفيفة للتوزيع ولعب الورق وحسم اللمّة." value={settings.soundEnabled} onChange={(soundEnabled) => updateSettings({ soundEnabled })} /></Section>
         <Section title="مظهر الأوراق"><View style={styles.choiceRow}>{CARD_FAN_CURVES.map((curve) => <Choice key={curve.value} label={curve.label} active={settings.cardFanCurve === curve.value} onPress={() => updateSettings({ cardFanCurve: curve.value })} />)}</View><Text style={styles.curveDescription}>اختر ارتفاع القوس وميل الأوراق في يدك. يطبّق التغيير فورًا ويُحفظ على جهازك.</Text></Section>
         <Section title="نقش ظهر البطاقات"><View style={styles.patternRow}>{CARD_BACK_PATTERNS.map((pattern) => <CardBackChoice key={pattern.value} {...pattern} active={settings.cardBackPattern === pattern.value} onPress={() => updateSettings({ cardBackPattern: pattern.value })} />)}</View><Text style={styles.curveDescription}>اختر النقش الذي يظهر على أوراق الخصوم. يُطبّق التغيير فورًا ويُحفظ على جهازك.</Text></Section>
+        <Section title="قراءة الطاولة"><View style={styles.choiceRow}>{TABLE_TEXT_SIZES.map((size) => <Choice key={size.value} label={size.label} active={settings.tableTextSize === size.value} onPress={() => updateSettings({ tableTextSize: size.value })} />)}</View><Text style={styles.curveDescription}>يكبّر أسماء اللاعبين والنتائج وبيانات الطرنيب داخل الطاولة لتسهيل القراءة. يُطبّق فورًا ويُحفظ على جهازك.</Text></Section>
         <Section title="للاعبين المتقدمين"><ToggleRow label="مؤشر قوة الأنواع" description="يعرض الاقتراح والدرجات وأيقونة شرح طريقة الاحتساب في المزايدة." value={settings.showStrengthIndicator} onChange={(showStrengthIndicator) => updateSettings({ showStrengthIndicator })} /></Section>
         <View style={styles.note}><Text style={styles.noteTitle}>اللعب الجماعي</Text><Text style={styles.noteText}>يمكنك إنشاء غرفة محلية وضم ثلاثة لاعبين عبر الشبكة نفسها أو نقطة الاتصال، من دون حاجة إلى الإنترنت.</Text></View>
       </ScrollView>

@@ -7,6 +7,7 @@ export type GamePhase = "home" | "bidding" | "trump" | "playing" | "trickResult"
 export type MatchMode = "solo" | "localRoom";
 export type CardFanCurve = "gentle" | "balanced" | "deep";
 export type CardBackPattern = "royal" | "navy" | "emerald";
+export type TableTextSize = "normal" | "large";
 
 export interface Card {
   id: string;
@@ -65,6 +66,7 @@ export interface GameSettings {
   showStrengthIndicator: boolean;
   cardFanCurve: CardFanCurve;
   cardBackPattern: CardBackPattern;
+  tableTextSize: TableTextSize;
 }
 
 export interface MatchState {

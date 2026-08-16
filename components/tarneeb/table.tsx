@@ -3,12 +3,12 @@ import { CardBack, PlayingCard } from "./card";
 import { CurvedCardHand } from "./card-fan";
 import { cardLabel, legalCards, suitName, suitSymbol } from "@/lib/tarneeb/engine";
 import { getNativeTableLayout } from "@/lib/tarneeb/native-ui-layout";
-import type { CardBackPattern, CardFanCurve, MatchState } from "@/lib/tarneeb/types";
+import type { CardBackPattern, CardFanCurve, MatchState, TableTextSize } from "@/lib/tarneeb/types";
 import { useEffect, useState, type ReactNode } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 
-export function GameTable({ state, onCardPress, action, fanCurve, cardBackPattern }: { state: MatchState; onCardPress: (cardId: string) => void; action?: ReactNode; fanCurve: CardFanCurve; cardBackPattern: CardBackPattern }) {
+export function GameTable({ state, onCardPress, action, fanCurve, cardBackPattern, tableTextSize }: { state: MatchState; onCardPress: (cardId: string) => void; action?: ReactNode; fanCurve: CardFanCurve; cardBackPattern: CardBackPattern; tableTextSize: TableTextSize }) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const nativeLayout = getNativeTableLayout({ width, height, insets });
@@ -19,31 +19,32 @@ export function GameTable({ state, onCardPress, action, fanCurve, cardBackPatter
   const bidder = state.bidding.highestBidder === null ? null : state.players[state.bidding.highestBidder];
   const hand = state.players[0].hand;
   const [draggingCard, setDraggingCard] = useState(false);
+  const largeText = tableTextSize === "large";
 
   return (
     <View style={[styles.screen, { paddingHorizontal: nativeLayout.horizontalPadding, paddingTop: nativeLayout.topSafeFallback }]}> 
       <View style={[styles.statusRow, { minHeight: nativeLayout.statusHeight }]}>
         <View style={styles.scorePill}>
-          <View style={styles.teamHeading}><Text style={styles.scoreLabel}>فريقك</Text><View style={styles.trickBadge}><Text style={styles.trickBadgeValue}>{state.tricksWon[0]}</Text><Text style={styles.trickBadgeLabel}>لمم</Text></View></View>
-          <Text style={styles.scoreValue}>{state.scores[0]}</Text>
+          <View style={styles.teamHeading}><Text style={[styles.scoreLabel, largeText && styles.scoreLabelLarge]}>فريقك</Text><View style={styles.trickBadge}><Text style={[styles.trickBadgeValue, largeText && styles.trickBadgeValueLarge]}>{state.tricksWon[0]}</Text><Text style={[styles.trickBadgeLabel, largeText && styles.trickBadgeLabelLarge]}>لمم</Text></View></View>
+          <Text style={[styles.scoreValue, largeText && styles.scoreValueLarge]}>{state.scores[0]}</Text>
         </View>
-        <View style={styles.contractPill}>
+        <View style={[styles.contractPill, trump && styles.contractPillTrump]}>
           {action}
           <View style={styles.contractCopy}>
-            <Text numberOfLines={1} style={styles.contractText}>{trump ? `الطرنيب: ${suitName(trump)} ${suitSymbol(trump)}` : "بانتظار اختيار الطرنيب"}</Text>
-            <Text numberOfLines={1} style={styles.contractBidder}>{bidder ? `طلبه ${bidder.name} · الطلب ${state.bidding.highestBid}` : "لم يُحسم صاحب الطلب بعد"}</Text>
+            <Text numberOfLines={1} style={[styles.contractText, largeText && styles.contractTextLarge]}>{trump ? `الطرنيب: ${suitName(trump)} ${suitSymbol(trump)}` : "بانتظار اختيار الطرنيب"}</Text>
+            <Text numberOfLines={1} style={[styles.contractBidder, largeText && styles.contractBidderLarge]}>{bidder ? `طلبه ${bidder.name} · الطلب ${state.bidding.highestBid}` : "لم يُحسم صاحب الطلب بعد"}</Text>
           </View>
         </View>
         <View style={styles.scorePill}>
-          <View style={styles.teamHeading}><Text style={styles.scoreLabel}>الخصم</Text><View style={styles.trickBadge}><Text style={styles.trickBadgeValue}>{state.tricksWon[1]}</Text><Text style={styles.trickBadgeLabel}>لمم</Text></View></View>
-          <Text style={styles.scoreValue}>{state.scores[1]}</Text>
+          <View style={styles.teamHeading}><Text style={[styles.scoreLabel, largeText && styles.scoreLabelLarge]}>الخصم</Text><View style={styles.trickBadge}><Text style={[styles.trickBadgeValue, largeText && styles.trickBadgeValueLarge]}>{state.tricksWon[1]}</Text><Text style={[styles.trickBadgeLabel, largeText && styles.trickBadgeLabelLarge]}>لمم</Text></View></View>
+          <Text style={[styles.scoreValue, largeText && styles.scoreValueLarge]}>{state.scores[1]}</Text>
         </View>
       </View>
 
       <View style={[styles.table, { minHeight: nativeLayout.tableMinHeight, maxHeight: nativeLayout.tableMaxHeight, marginTop: nativeLayout.tableTopMargin }]}>
-        <PlayerSeat name={state.players[2].name} cards={state.players[2].handCount} position="top" active={currentSeat(state) === 2} cardBackPattern={cardBackPattern} />
-        <PlayerSeat name={state.players[3].name} cards={state.players[3].handCount} position="left" active={currentSeat(state) === 3} cardBackPattern={cardBackPattern} />
-        <PlayerSeat name={state.players[1].name} cards={state.players[1].handCount} position="right" active={currentSeat(state) === 1} cardBackPattern={cardBackPattern} />
+        <PlayerSeat name={state.players[2].name} cards={state.players[2].handCount} position="top" active={currentSeat(state) === 2} cardBackPattern={cardBackPattern} largeText={largeText} />
+        <PlayerSeat name={state.players[3].name} cards={state.players[3].handCount} position="left" active={currentSeat(state) === 3} cardBackPattern={cardBackPattern} largeText={largeText} />
+        <PlayerSeat name={state.players[1].name} cards={state.players[1].handCount} position="right" active={currentSeat(state) === 1} cardBackPattern={cardBackPattern} largeText={largeText} />
 
         <View style={styles.trickArea}>
           {humanTurn && (
@@ -55,12 +56,12 @@ export function GameTable({ state, onCardPress, action, fanCurve, cardBackPatter
           {cardBySeat[3] && <TrickCard card={cardBySeat[3]} seat={3} collectingWinner={state.phase === "trickResult" ? state.lastTrick?.winnerId ?? null : null} />}
           {cardBySeat[1] && <TrickCard card={cardBySeat[1]} seat={1} collectingWinner={state.phase === "trickResult" ? state.lastTrick?.winnerId ?? null : null} />}
           {cardBySeat[0] && <TrickCard card={cardBySeat[0]} seat={0} collectingWinner={state.phase === "trickResult" ? state.lastTrick?.winnerId ?? null : null} />}
-          {state.trick.plays.length === 0 && <Text style={styles.tableHint}>{humanTurn ? "اختر ورقة للعب" : "ينتظر اللاعبون"}</Text>}
+          {state.trick.plays.length === 0 && <Text style={[styles.tableHint, largeText && styles.tableHintLarge]}>{humanTurn ? "اختر ورقة للعب" : "ينتظر اللاعبون"}</Text>}
         </View>
       </View>
 
       <View style={[styles.handArea, { height: nativeLayout.handAreaHeight, marginTop: nativeLayout.handTopMargin }]}> 
-        <View style={styles.handHeader}><Text style={styles.handTitle}>أوراقك</Text><Text style={styles.handHint}>{humanTurn ? "اسحب ورقة للطاولة أو اضغط عليها" : "دور الخصم"}</Text></View>
+        <View style={styles.handHeader}><Text style={[styles.handTitle, largeText && styles.handTitleLarge]}>أوراقك</Text><Text style={[styles.handHint, largeText && styles.handHintLarge]}>{humanTurn ? "اسحب ورقة للطاولة أو اضغط عليها" : "دور الخصم"}</Text></View>
         <CurvedCardHand cards={hand} accessibilityLabel="يدك مرتبة ضمن قوس متساوٍ" dragEnabled={humanTurn} entranceStep={26} curveStrength={fanCurve} cardBackPattern={cardBackPattern} dealFlip={false} disabledCardIds={!humanTurn ? hand.map((card) => card.id) : hand.filter((card) => !playable.includes(card.id)).map((card) => card.id)} onCardDragStateChange={setDraggingCard} onCardPress={onCardPress} />
       </View>
     </View>
@@ -127,14 +128,17 @@ function currentSeat(state: MatchState) {
   return state.trick.plays.length === 0 ? state.trick.leaderId : ((state.trick.plays.at(-1)!.playerId + 1) % 4);
 }
 
-function PlayerSeat({ name, cards, position, active, cardBackPattern }: { name: string; cards: number; position: "top" | "left" | "right"; active: boolean; cardBackPattern: CardBackPattern }) {
+function PlayerSeat({ name, cards, position, active, cardBackPattern, largeText }: { name: string; cards: number; position: "top" | "left" | "right"; active: boolean; cardBackPattern: CardBackPattern; largeText: boolean }) {
   const isSideSeat = position !== "top";
   const cardRotation = position === "left" ? "90deg" : "-90deg";
   return (
-    <View style={[styles.playerSeat, styles[position], active && styles.activeSeat]}>
-      <View style={styles.avatar}><Text style={styles.avatarText}>{name.slice(0, 1)}</Text></View>
-      <View style={styles.seatDetails}>
-        <Text style={styles.playerName}>{name}</Text>
+      <View style={[styles.playerSeat, styles[position], active && styles.activeSeat]}>
+        <View style={styles.avatar}><Text style={styles.avatarText}>{name.slice(0, 1)}</Text></View>
+        <View style={styles.seatDetails}>
+          <View style={styles.nameRow}>
+            <Text style={[styles.playerName, largeText && styles.playerNameLarge]}>{name}</Text>
+            {active && <View style={styles.turnMarker}><Text style={styles.turnArrow}>{position === "top" ? "↓" : position === "left" ? "→" : "←"}</Text><Text style={styles.turnText}>دوره</Text></View>}
+          </View>
         <View style={[styles.cardBacks, isSideSeat ? styles.sideCardBacks : styles.topCardBacks]}>
           {Array.from({ length: Math.min(cards, 4) }).map((_, index) => (
             <View key={`${name}-${index}`} style={[isSideSeat ? (index === 0 ? styles.firstSideCard : styles.sideCardStack) : styles.topCardStack, isSideSeat && { transform: [{ rotate: cardRotation }] }]}>
@@ -181,25 +185,30 @@ const styles = StyleSheet.create({
   statusRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: 8, gap: 8 },
   scorePill: { minWidth: 66, alignItems: "center", backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6 },
   teamHeading: { flexDirection: "row-reverse", alignItems: "center", gap: 5 },
-  scoreLabel: { color: "#D9EEE4", fontSize: 11, writingDirection: "rtl" },
-  scoreValue: { color: "#FFF8E7", fontSize: 20, fontWeight: "800", lineHeight: 24 },
+  scoreLabel: { color: "#D9EEE4", fontSize: 11, writingDirection: "rtl" }, scoreLabelLarge: { fontSize: 12 },
+  scoreValue: { color: "#FFF8E7", fontSize: 20, fontWeight: "800", lineHeight: 24 }, scoreValueLarge: { fontSize: 23, lineHeight: 27 },
   trickBadge: { flexDirection: "row", alignItems: "baseline", gap: 2, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 9, backgroundColor: "#E3B341" },
-  trickBadgeValue: { color: "#173C2F", fontSize: 12, fontWeight: "900" },
-  trickBadgeLabel: { color: "#173C2F", fontSize: 9, fontWeight: "900" },
+  trickBadgeValue: { color: "#173C2F", fontSize: 12, fontWeight: "900" }, trickBadgeValueLarge: { fontSize: 13 },
+  trickBadgeLabel: { color: "#173C2F", fontSize: 9, fontWeight: "900" }, trickBadgeLabelLarge: { fontSize: 10 },
   contractPill: { flex: 1, minHeight: 48, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 7, paddingHorizontal: 7, borderWidth: 1, borderColor: "rgba(227,179,65,0.4)", borderRadius: 14, backgroundColor: "rgba(14,59,46,0.42)" },
+  contractPillTrump: { backgroundColor: "#7C2D12", borderColor: "#FBBF24", shadowColor: "#FBBF24", shadowOpacity: 0.28, shadowRadius: 7, shadowOffset: { width: 0, height: 2 }, elevation: 4 },
   contractCopy: { flex: 1, alignItems: "center", justifyContent: "center", minWidth: 0 },
-  contractText: { alignSelf: "stretch", flexShrink: 1, color: "#F5D889", fontSize: 12, fontWeight: "900", lineHeight: 16, textAlign: "center", writingDirection: "rtl" },
-  contractBidder: { alignSelf: "stretch", flexShrink: 1, color: "#D9EEE4", fontSize: 10, fontWeight: "700", lineHeight: 13, textAlign: "center", writingDirection: "rtl" },
+  contractText: { alignSelf: "stretch", flexShrink: 1, color: "#F5D889", fontSize: 12, fontWeight: "900", lineHeight: 16, textAlign: "center", writingDirection: "rtl" }, contractTextLarge: { fontSize: 13, lineHeight: 17 },
+  contractBidder: { alignSelf: "stretch", flexShrink: 1, color: "#D9EEE4", fontSize: 10, fontWeight: "700", lineHeight: 13, textAlign: "center", writingDirection: "rtl" }, contractBidderLarge: { fontSize: 11, lineHeight: 14 },
   table: { flex: 1, minHeight: 330, marginTop: 10, borderRadius: 28, backgroundColor: "#16624A", borderWidth: 1, borderColor: "rgba(245,216,137,0.4)", overflow: "hidden" },
   playerSeat: { position: "absolute", flexDirection: "row", alignItems: "center", gap: 5, padding: 6, borderRadius: 16, borderWidth: 1, borderColor: "transparent" },
   top: { top: 10, alignSelf: "center", flexDirection: "column", alignItems: "center" },
   left: { left: 8, top: "42%" },
   right: { right: 8, top: "42%", flexDirection: "row-reverse" },
-  activeSeat: { backgroundColor: "rgba(56,189,248,0.16)", borderColor: "#38BDF8" },
+  activeSeat: { backgroundColor: "rgba(251,191,36,0.2)", borderColor: "#FBBF24", shadowColor: "#FBBF24", shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 0 }, elevation: 5 },
   avatar: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#E3B341", alignItems: "center", justifyContent: "center" },
   avatarText: { color: "#17211D", fontWeight: "900", fontSize: 13 },
   seatDetails: { alignItems: "center" },
-  playerName: { color: "#FFF8E7", fontWeight: "700", fontSize: 12, writingDirection: "rtl" },
+  nameRow: { flexDirection: "row-reverse", alignItems: "center", gap: 4 },
+  playerName: { color: "#FFF8E7", fontWeight: "700", fontSize: 12, writingDirection: "rtl" }, playerNameLarge: { fontSize: 14 },
+  turnMarker: { flexDirection: "row-reverse", alignItems: "center", gap: 2, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 8, backgroundColor: "#FBBF24" },
+  turnArrow: { color: "#17211D", fontSize: 13, lineHeight: 14, fontWeight: "900" },
+  turnText: { color: "#17211D", fontSize: 9, fontWeight: "900", writingDirection: "rtl" },
   cardBacks: { marginTop: 4 },
   topCardBacks: { flexDirection: "row-reverse", alignSelf: "center" },
   topCardStack: { marginRight: -8 },
@@ -216,11 +225,11 @@ const styles = StyleSheet.create({
   playBottom: { bottom: 8, alignSelf: "center" },
   playLeft: { left: 8, top: 68 },
   playRight: { right: 8, top: 68 },
-  tableHint: { alignSelf: "center", marginTop: 92, color: "#D9EEE4", fontSize: 13, writingDirection: "rtl" },
+  tableHint: { alignSelf: "center", marginTop: 92, color: "#D9EEE4", fontSize: 13, writingDirection: "rtl" }, tableHintLarge: { fontSize: 15 },
   handArea: { height: 140, marginTop: 10, paddingBottom: 8, alignItems: "center" },
   handHeader: { alignSelf: "stretch", flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 4, marginBottom: 6 },
-  handTitle: { color: "#FFF8E7", fontSize: 16, fontWeight: "800", writingDirection: "rtl" },
-  handHint: { color: "#B4D6C7", fontSize: 12, writingDirection: "rtl" },
+  handTitle: { color: "#FFF8E7", fontSize: 16, fontWeight: "800", writingDirection: "rtl" }, handTitleLarge: { fontSize: 18 },
+  handHint: { color: "#B4D6C7", fontSize: 12, writingDirection: "rtl" }, handHintLarge: { fontSize: 14 },
   lastTrick: { margin: 12, backgroundColor: "#FFF8E7", borderRadius: 18, padding: 14, alignItems: "center" },
   lastTrickTitle: { color: "#0E3B2E", fontSize: 16, fontWeight: "900", writingDirection: "rtl" },
   lastTrickDetail: { color: "#52635C", fontSize: 13, marginTop: 3, writingDirection: "rtl" },

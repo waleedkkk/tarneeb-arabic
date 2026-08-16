@@ -26,6 +26,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   showStrengthIndicator: true,
   cardFanCurve: "balanced",
   cardBackPattern: "royal",
+  tableTextSize: "normal",
 };
 
 export function teamOf(seat: Seat): Team {
