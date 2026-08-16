@@ -3,6 +3,7 @@ import { CardBack, PlayingCard } from "./card";
 import { CurvedCardHand } from "./card-fan";
 import { cardLabel, legalCards, suitName, suitSymbol } from "@/lib/tarneeb/engine";
 import { getNativeTableLayout } from "@/lib/tarneeb/native-ui-layout";
+import { getOpponentCardFanLayout } from "@/lib/tarneeb/opponent-card-fan-layout";
 import type { CardBackPattern, CardFanCurve, MatchState, TableTextSize } from "@/lib/tarneeb/types";
 import { useEffect, useState, type ReactNode } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -131,6 +132,7 @@ function currentSeat(state: MatchState) {
 function PlayerSeat({ name, cards, position, active, cardBackPattern, largeText }: { name: string; cards: number; position: "top" | "left" | "right"; active: boolean; cardBackPattern: CardBackPattern; largeText: boolean }) {
   const isSideSeat = position !== "top";
   const cardRotation = position === "left" ? "90deg" : "-90deg";
+  const fan = getOpponentCardFanLayout(cards, position);
   return (
       <View style={[styles.playerSeat, styles[position], active && styles.activeSeat]}>
         <View style={styles.avatar}><Text style={styles.avatarText}>{name.slice(0, 1)}</Text></View>
@@ -140,8 +142,13 @@ function PlayerSeat({ name, cards, position, active, cardBackPattern, largeText 
             {active && <View style={styles.turnMarker}><Text style={styles.turnArrow}>{position === "top" ? "↓" : position === "left" ? "→" : "←"}</Text><Text style={styles.turnText}>دوره</Text></View>}
           </View>
         <View style={[styles.cardBacks, isSideSeat ? styles.sideCardBacks : styles.topCardBacks]}>
-          {Array.from({ length: Math.min(cards, 4) }).map((_, index) => (
-            <View key={`${name}-${index}`} style={[isSideSeat ? (index === 0 ? styles.firstSideCard : styles.sideCardStack) : styles.topCardStack, isSideSeat && { transform: [{ rotate: cardRotation }] }]}>
+          {fan.map((card, index) => (
+            <View key={`${name}-${index}`} style={[
+              isSideSeat ? styles.sideCardStack : styles.topCardStack,
+              isSideSeat
+                ? { marginTop: index === 0 ? 0 : -(38 - card.step), transform: [{ rotate: cardRotation }, { rotate: `${card.rotation}deg` }] }
+                : { marginRight: index === fan.length - 1 ? 0 : -(27 - card.step), transform: [{ translateY: card.lift }, { rotate: `${card.rotation}deg` }] },
+            ]}>
               <CardBack compact pattern={cardBackPattern} />
             </View>
           ))}
@@ -211,10 +218,9 @@ const styles = StyleSheet.create({
   turnText: { color: "#17211D", fontSize: 9, fontWeight: "900", writingDirection: "rtl" },
   cardBacks: { marginTop: 4 },
   topCardBacks: { flexDirection: "row-reverse", alignSelf: "center" },
-  topCardStack: { marginRight: -8 },
+  topCardStack: { width: 27, height: 38, alignItems: "center", justifyContent: "center" },
   sideCardBacks: { alignItems: "center" },
-  firstSideCard: { width: 27, height: 38, alignItems: "center", justifyContent: "center" },
-  sideCardStack: { width: 27, height: 22, marginTop: -16, alignItems: "center", justifyContent: "center" },
+  sideCardStack: { width: 27, height: 38, alignItems: "center", justifyContent: "center" },
   trickArea: { position: "absolute", width: 190, height: 205, alignSelf: "center", top: "28%", left: "50%", transform: [{ translateX: -95 }], borderRadius: 95, borderWidth: 1, borderColor: "rgba(255,248,231,0.18)" },
   dropTarget: { position: "absolute", top: 64, left: 20, right: 20, height: 78, borderRadius: 18, borderWidth: 1, borderStyle: "dashed", borderColor: "rgba(217,238,228,0.45)", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(14,59,46,0.18)" },
   dropTargetActive: { borderColor: "#E3B341", backgroundColor: "rgba(227,179,65,0.18)", transform: [{ scale: 1.04 }] },
