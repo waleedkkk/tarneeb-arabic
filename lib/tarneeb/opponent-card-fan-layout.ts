@@ -20,7 +20,7 @@ export function getOpponentCardFanLayout(cards: number, position: OpponentSeatPo
   const maxStep = isTop ? 19 : 16;
   const step = count === 1 ? 0 : Math.min(maxStep, span / (count - 1));
   const center = (count - 1) / 2;
-  const rotationStep = isTop ? 1.8 : 1.15;
+  const rotationStep = isTop ? 0 : 1.15;
 
   return Array.from({ length: count }, (_, index) => {
     const offset = index - center;
@@ -28,7 +28,7 @@ export function getOpponentCardFanLayout(cards: number, position: OpponentSeatPo
       count,
       step,
       rotation: offset * rotationStep,
-      lift: isTop ? Math.abs(offset) * 0.9 : 0,
+      lift: 0,
     };
   });
 }

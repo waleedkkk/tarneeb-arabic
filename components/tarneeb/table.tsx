@@ -147,7 +147,7 @@ function PlayerSeat({ name, cards, position, active, cardBackPattern, largeText 
               isSideSeat ? styles.sideCardStack : styles.topCardStack,
               isSideSeat
                 ? { marginTop: index === 0 ? 0 : -(38 - card.step), transform: [{ rotate: cardRotation }, { rotate: `${card.rotation}deg` }] }
-                : { marginRight: index === fan.length - 1 ? 0 : -(27 - card.step), transform: [{ translateY: card.lift }, { rotate: `${card.rotation}deg` }] },
+                : { marginLeft: index === 0 ? 0 : -(27 - card.step), zIndex: index, transform: [{ translateY: card.lift }] },
             ]}>
               <CardBack compact pattern={cardBackPattern} />
             </View>
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   turnArrow: { color: "#17211D", fontSize: 13, lineHeight: 14, fontWeight: "900" },
   turnText: { color: "#17211D", fontSize: 9, fontWeight: "900", writingDirection: "rtl" },
   cardBacks: { marginTop: 4 },
-  topCardBacks: { flexDirection: "row-reverse", alignSelf: "center" },
+  topCardBacks: { flexDirection: "row", alignSelf: "center", height: 40, alignItems: "center" },
   topCardStack: { width: 27, height: 38, alignItems: "center", justifyContent: "center" },
   sideCardBacks: { alignItems: "center" },
   sideCardStack: { width: 27, height: 38, alignItems: "center", justifyContent: "center" },

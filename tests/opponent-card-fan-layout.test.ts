@@ -14,10 +14,9 @@ describe("مروحة أوراق الخصوم", () => {
     expect(fullHand[0].step).toBeLessThan(shortHand[0].step);
   });
 
-  it("يحافظ على قوس متوازن في مقعد الشريك العلوي", () => {
+  it("يحافظ على صف مستقيم ومتوازن في مقعد الشريك العلوي", () => {
     const layout = getOpponentCardFanLayout(5, "top");
-    expect(layout[0].rotation).toBe(-layout[4].rotation);
-    expect(layout[0].lift).toBe(layout[4].lift);
-    expect(layout[2].lift).toBe(0);
+    expect(layout.every((card) => card.rotation === 0)).toBe(true);
+    expect(layout.every((card) => card.lift === 0)).toBe(true);
   });
 });
