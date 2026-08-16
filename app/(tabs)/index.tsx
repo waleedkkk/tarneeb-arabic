@@ -26,7 +26,7 @@ export default function GameScreen() {
 
   return (
     <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
-      <GameTable action={<MatchActions />} fanCurve={game.settings.cardFanCurve} cardBackPattern={game.settings.cardBackPattern} tableTextSize={game.settings.tableTextSize} state={state} onCardPress={(cardId) => {
+      <GameTable action={<MatchActions />} fanCurve={game.settings.cardFanCurve} cardBackPattern={game.settings.cardBackPattern} tableTextSize={game.settings.tableTextSize} opponentCardDensity={game.settings.opponentCardDensity} state={state} onCardPress={(cardId) => {
         const card = state.players[0].hand.find((item) => item.id === cardId);
         if (card && legalCards(state.players[0].hand, state.trick).some((item) => item.id === card.id)) {
           if (isNetworkMatch) room.requestCard(card.id);

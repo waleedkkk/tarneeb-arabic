@@ -4,12 +4,12 @@ import { CurvedCardHand } from "./card-fan";
 import { cardLabel, legalCards, suitName, suitSymbol } from "@/lib/tarneeb/engine";
 import { getNativeTableLayout } from "@/lib/tarneeb/native-ui-layout";
 import { getOpponentCardFanLayout } from "@/lib/tarneeb/opponent-card-fan-layout";
-import type { CardBackPattern, CardFanCurve, MatchState, TableTextSize } from "@/lib/tarneeb/types";
-import { useEffect, useState, type ReactNode } from "react";
+import type { CardBackPattern, CardFanCurve, MatchState, OpponentCardDensity, TableTextSize } from "@/lib/tarneeb/types";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, FadeOut, LinearTransition, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from "react-native-reanimated";
 
-export function GameTable({ state, onCardPress, action, fanCurve, cardBackPattern, tableTextSize }: { state: MatchState; onCardPress: (cardId: string) => void; action?: ReactNode; fanCurve: CardFanCurve; cardBackPattern: CardBackPattern; tableTextSize: TableTextSize }) {
+export function GameTable({ state, onCardPress, action, fanCurve, cardBackPattern, tableTextSize, opponentCardDensity }: { state: MatchState; onCardPress: (cardId: string) => void; action?: ReactNode; fanCurve: CardFanCurve; cardBackPattern: CardBackPattern; tableTextSize: TableTextSize; opponentCardDensity: OpponentCardDensity }) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const nativeLayout = getNativeTableLayout({ width, height, insets });
@@ -43,9 +43,9 @@ export function GameTable({ state, onCardPress, action, fanCurve, cardBackPatter
       </View>
 
       <View style={[styles.table, { minHeight: nativeLayout.tableMinHeight, maxHeight: nativeLayout.tableMaxHeight, marginTop: nativeLayout.tableTopMargin }]}>
-        <PlayerSeat name={state.players[2].name} cards={state.players[2].handCount} position="top" active={currentSeat(state) === 2} cardBackPattern={cardBackPattern} largeText={largeText} />
-        <PlayerSeat name={state.players[3].name} cards={state.players[3].handCount} position="left" active={currentSeat(state) === 3} cardBackPattern={cardBackPattern} largeText={largeText} />
-        <PlayerSeat name={state.players[1].name} cards={state.players[1].handCount} position="right" active={currentSeat(state) === 1} cardBackPattern={cardBackPattern} largeText={largeText} />
+        <PlayerSeat name={state.players[2].name} cards={state.players[2].handCount} position="top" active={currentSeat(state) === 2} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} />
+        <PlayerSeat name={state.players[3].name} cards={state.players[3].handCount} position="left" active={currentSeat(state) === 3} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} />
+        <PlayerSeat name={state.players[1].name} cards={state.players[1].handCount} position="right" active={currentSeat(state) === 1} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} />
 
         <View style={styles.trickArea}>
           {humanTurn && (
@@ -129,10 +129,28 @@ function currentSeat(state: MatchState) {
   return state.trick.plays.length === 0 ? state.trick.leaderId : ((state.trick.plays.at(-1)!.playerId + 1) % 4);
 }
 
-function PlayerSeat({ name, cards, position, active, cardBackPattern, largeText }: { name: string; cards: number; position: "top" | "left" | "right"; active: boolean; cardBackPattern: CardBackPattern; largeText: boolean }) {
+function PlayerSeat({ name, cards, position, active, cardBackPattern, density, largeText }: { name: string; cards: number; position: "top" | "left" | "right"; active: boolean; cardBackPattern: CardBackPattern; density: OpponentCardDensity; largeText: boolean }) {
   const isSideSeat = position !== "top";
   const cardRotation = position === "left" ? "90deg" : "-90deg";
-  const fan = getOpponentCardFanLayout(cards, position);
+  const fan = getOpponentCardFanLayout(cards, position, density);
+  const previousCards = useRef(cards);
+  const handPulse = useSharedValue(0);
+
+  useEffect(() => {
+    if (position === "top" && cards < previousCards.current) {
+      handPulse.value = 0;
+      handPulse.value = withSequence(
+        withTiming(1, { duration: 130, easing: Easing.out(Easing.cubic) }),
+        withTiming(0, { duration: 210, easing: Easing.inOut(Easing.cubic) }),
+      );
+    }
+    previousCards.current = cards;
+  }, [cards, handPulse, position]);
+
+  const partnerHandLossStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -4 * handPulse.value }, { scale: 1 + 0.025 * handPulse.value }],
+  }));
+
   return (
       <View style={[styles.playerSeat, styles[position], active && styles.activeSeat]}>
         <View style={styles.avatar}><Text style={styles.avatarText}>{name.slice(0, 1)}</Text></View>
@@ -141,18 +159,18 @@ function PlayerSeat({ name, cards, position, active, cardBackPattern, largeText 
             <Text style={[styles.playerName, largeText && styles.playerNameLarge]}>{name}</Text>
             {active && <View style={styles.turnMarker}><Text style={styles.turnArrow}>{position === "top" ? "↓" : position === "left" ? "→" : "←"}</Text><Text style={styles.turnText}>دوره</Text></View>}
           </View>
-        <View style={[styles.cardBacks, isSideSeat ? styles.sideCardBacks : styles.topCardBacks]}>
+        <Animated.View style={[styles.cardBacks, isSideSeat ? styles.sideCardBacks : styles.topCardBacks, position === "top" && partnerHandLossStyle]}>
           {fan.map((card, index) => (
-            <View key={`${name}-${index}`} style={[
+            <Animated.View key={`${name}-${index}`} layout={LinearTransition.duration(160)} entering={FadeIn.duration(130)} exiting={position === "top" ? FadeOut.duration(130) : undefined} style={[
               isSideSeat ? styles.sideCardStack : styles.topCardStack,
               isSideSeat
-                ? { marginTop: index === 0 ? 0 : -(38 - card.step), transform: [{ rotate: cardRotation }, { rotate: `${card.rotation}deg` }] }
+                ? { marginTop: index === 0 ? 0 : -(62 - card.step), zIndex: index, transform: [{ rotate: cardRotation }, { rotate: `${card.rotation}deg` }] }
                 : { marginLeft: index === 0 ? 0 : -(27 - card.step), zIndex: index, transform: [{ translateY: card.lift }] },
             ]}>
               <CardBack compact pattern={cardBackPattern} />
-            </View>
+            </Animated.View>
           ))}
-        </View>
+        </Animated.View>
       </View>
     </View>
   );
@@ -205,8 +223,8 @@ const styles = StyleSheet.create({
   table: { flex: 1, minHeight: 330, marginTop: 10, borderRadius: 28, backgroundColor: "#16624A", borderWidth: 1, borderColor: "rgba(245,216,137,0.4)", overflow: "hidden" },
   playerSeat: { position: "absolute", flexDirection: "row", alignItems: "center", gap: 5, padding: 6, borderRadius: 16, borderWidth: 1, borderColor: "transparent" },
   top: { top: 10, alignSelf: "center", flexDirection: "column", alignItems: "center" },
-  left: { left: 8, top: "42%" },
-  right: { right: 8, top: "42%", flexDirection: "row-reverse" },
+  left: { left: 8, top: "50%", transform: [{ translateY: -103 }] },
+  right: { right: 8, top: "50%", flexDirection: "row-reverse", transform: [{ translateY: -103 }] },
   activeSeat: { backgroundColor: "rgba(251,191,36,0.2)", borderColor: "#FBBF24", shadowColor: "#FBBF24", shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 0 }, elevation: 5 },
   avatar: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#E3B341", alignItems: "center", justifyContent: "center" },
   avatarText: { color: "#17211D", fontWeight: "900", fontSize: 13 },
@@ -219,7 +237,7 @@ const styles = StyleSheet.create({
   cardBacks: { marginTop: 4 },
   topCardBacks: { flexDirection: "row", alignSelf: "center", height: 40, alignItems: "center" },
   topCardStack: { width: 27, height: 38, alignItems: "center", justifyContent: "center" },
-  sideCardBacks: { alignItems: "center" },
+  sideCardBacks: { width: 48, height: 206, alignItems: "center", justifyContent: "center" },
   sideCardStack: { width: 27, height: 38, alignItems: "center", justifyContent: "center" },
   trickArea: { position: "absolute", width: 190, height: 205, alignSelf: "center", top: "28%", left: "50%", transform: [{ translateX: -95 }], borderRadius: 95, borderWidth: 1, borderColor: "rgba(255,248,231,0.18)" },
   dropTarget: { position: "absolute", top: 64, left: 20, right: 20, height: 78, borderRadius: 18, borderWidth: 1, borderStyle: "dashed", borderColor: "rgba(217,238,228,0.45)", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(14,59,46,0.18)" },

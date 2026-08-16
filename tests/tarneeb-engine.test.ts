@@ -61,5 +61,6 @@ describe("محرك طرنيب", () => {
     expect(DEFAULT_SETTINGS.cardFanCurve).toBe("balanced");
     expect(DEFAULT_SETTINGS.cardBackPattern).toBe("royal");
     expect(DEFAULT_SETTINGS.tableTextSize).toBe("normal");
+    expect(DEFAULT_SETTINGS.opponentCardDensity).toBe("balanced");
   });
 });

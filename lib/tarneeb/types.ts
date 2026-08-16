@@ -8,6 +8,7 @@ export type MatchMode = "solo" | "localRoom";
 export type CardFanCurve = "gentle" | "balanced" | "deep";
 export type CardBackPattern = "royal" | "navy" | "emerald";
 export type TableTextSize = "normal" | "large";
+export type OpponentCardDensity = "compact" | "balanced" | "spacious";
 
 export interface Card {
   id: string;
@@ -67,6 +68,7 @@ export interface GameSettings {
   cardFanCurve: CardFanCurve;
   cardBackPattern: CardBackPattern;
   tableTextSize: TableTextSize;
+  opponentCardDensity: OpponentCardDensity;
 }
 
 export interface MatchState {

@@ -27,6 +27,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   cardFanCurve: "balanced",
   cardBackPattern: "royal",
   tableTextSize: "normal",
+  opponentCardDensity: "balanced",
 };
 
 export function teamOf(seat: Seat): Team {

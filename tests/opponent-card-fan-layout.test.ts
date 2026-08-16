@@ -19,4 +19,11 @@ describe("مروحة أوراق الخصوم", () => {
     expect(layout.every((card) => card.rotation === 0)).toBe(true);
     expect(layout.every((card) => card.lift === 0)).toBe(true);
   });
+
+  it("يغيّر تباعد أوراق الخصوم حسب كثافة التكديس المختارة", () => {
+    const compact = getOpponentCardFanLayout(13, "right", "compact");
+    const spacious = getOpponentCardFanLayout(13, "right", "spacious");
+
+    expect(compact[0].step).toBeLessThan(spacious[0].step);
+  });
 });
