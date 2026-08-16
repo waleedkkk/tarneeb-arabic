@@ -28,6 +28,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   cardBackPattern: "royal",
   tableTextSize: "normal",
   opponentCardDensity: "balanced",
+  turnTimerSeconds: 0,
 };
 
 export function teamOf(seat: Seat): Team {
@@ -123,6 +124,7 @@ export function createHomeState(): MatchState {
     tricksWon: { 0: 0, 1: 0 },
     scores: { 0: 0, 1: 0 },
     roundSummary: null,
+    matchLog: { bids: [], tricks: [] },
   };
 }
 
@@ -138,6 +140,7 @@ export function createRound(previous: MatchState, resetScores = false): MatchSta
     tricksWon: { 0: 0, 1: 0 },
     scores: resetScores ? { 0: 0, 1: 0 } : previous.scores,
     roundSummary: null,
+    matchLog: { bids: [], tricks: [] },
   };
 }
 
@@ -201,6 +204,11 @@ export function submitBid(state: MatchState, playerId: Seat, proposedBid: number
     activeSeats: { ...state.bidding.activeSeats },
     bids: [...state.bidding.bids, { playerId, bid }],
   };
+  const playerName = state.players.find((player) => player.id === playerId)?.name ?? `اللاعب ${playerId + 1}`;
+  const matchLog = {
+    ...state.matchLog,
+    bids: [...state.matchLog.bids, { playerId, playerName, bid }],
+  };
 
   if (bid === null) {
     bidding.activeSeats[playerId] = false;
@@ -210,11 +218,11 @@ export function submitBid(state: MatchState, playerId: Seat, proposedBid: number
   }
 
   if (bidding.highestBidder !== null && activeCount(bidding) === 1) {
-    return { ...state, phase: "trump", bidding };
+    return { ...state, phase: "trump", bidding, matchLog };
   }
 
   bidding.currentPlayer = nextActiveSeat(bidding, playerId);
-  return { ...state, bidding };
+  return { ...state, bidding, matchLog };
 }
 
 export function selectTrump(state: MatchState, playerId: Seat, trumpSuit: Suit): MatchState {
@@ -280,7 +288,25 @@ export function playCard(state: MatchState, playerId: Seat, cardId: string): Mat
   const winnerTeam = teamOf(resolved.winnerId);
   const nextTricks: Record<Team, number> = { ...state.tricksWon, [winnerTeam]: state.tricksWon[winnerTeam] + 1 };
   const completed = state.tricksWon[0] + state.tricksWon[1] + 1;
-  const withResult: MatchState = { ...state, players, phase: "trickResult", trick, lastTrick: resolved, tricksWon: nextTricks };
+  const winnerName = players.find((player) => player.id === resolved.winnerId)?.name ?? `اللاعب ${resolved.winnerId + 1}`;
+  const trickEntry = {
+    trickNumber: completed,
+    winnerId: resolved.winnerId,
+    winnerName,
+    plays: resolved.plays.map((play) => ({
+      ...play,
+      playerName: players.find((player) => player.id === play.playerId)?.name ?? `اللاعب ${play.playerId + 1}`,
+    })),
+  };
+  const withResult: MatchState = {
+    ...state,
+    players,
+    phase: "trickResult",
+    trick,
+    lastTrick: resolved,
+    tricksWon: nextTricks,
+    matchLog: { ...state.matchLog, tricks: [...state.matchLog.tricks, trickEntry] },
+  };
   return completed === 13 ? scoreRound(withResult, nextTricks) : withResult;
 }
 

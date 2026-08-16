@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardBeats, createHomeState, createRound, DEFAULT_SETTINGS, legalCards, resolveTrick, submitBid, suitStrength } from "../lib/tarneeb/engine";
+import { cardBeats, createHomeState, createRound, DEFAULT_SETTINGS, legalCards, playCard, resolveTrick, submitBid, suitStrength } from "../lib/tarneeb/engine";
 import type { Card, Trick } from "../lib/tarneeb/types";
 
 const card = (suit: Card["suit"], rank: Card["rank"]): Card => ({ id: `${suit}-${rank}`, suit, rank });
@@ -28,6 +28,26 @@ describe("محرك طرنيب", () => {
     expect(next.bidding.highestBid).toBe(8);
     expect(next.bidding.highestBidder).toBe(0);
     expect(next.bidding.currentPlayer).toBe(1);
+  });
+
+  it("يحفظ أسماء أصحاب المزايدات واللمم في سجل المباراة", () => {
+    const bidState = createRound(createHomeState(), true);
+    const afterBid = submitBid(bidState, 0, 8);
+    expect(afterBid.matchLog.bids).toEqual([{ playerId: 0, playerName: "أنت", bid: 8 }]);
+
+    const cards = [card("clubs", 10), card("clubs", 13), card("spades", 2), card("clubs", 14)];
+    const playingState = {
+      ...afterBid,
+      phase: "playing" as const,
+      bidding: { ...afterBid.bidding, trumpSuit: "spades" as const },
+      trick: { leaderId: 0 as const, leadSuit: null, plays: [] },
+      players: afterBid.players.map((player, index) => ({ ...player, hand: [cards[index]], handCount: 1 })),
+    };
+    const afterTrick = cards.reduce<import("../lib/tarneeb/types").MatchState>((current, item, playerId) => playCard(current, playerId as 0 | 1 | 2 | 3, item.id), playingState);
+
+    expect(afterTrick.matchLog.tricks).toHaveLength(1);
+    expect(afterTrick.matchLog.tricks[0]).toMatchObject({ trickNumber: 1, winnerId: 2, winnerName: "شريكك" });
+    expect(afterTrick.matchLog.tricks[0].plays.map((play) => play.playerName)).toEqual(["أنت", "ليان", "شريكك", "سامر"]);
   });
 
   it("يعيد بدء المباراة بجولة مزايدة جديدة مع تصفير النقاط واللمم", () => {
@@ -62,5 +82,6 @@ describe("محرك طرنيب", () => {
     expect(DEFAULT_SETTINGS.cardBackPattern).toBe("royal");
     expect(DEFAULT_SETTINGS.tableTextSize).toBe("normal");
     expect(DEFAULT_SETTINGS.opponentCardDensity).toBe("balanced");
+    expect(DEFAULT_SETTINGS.turnTimerSeconds).toBe(0);
   });
 });

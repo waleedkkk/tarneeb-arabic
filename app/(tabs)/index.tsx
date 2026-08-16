@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useGame } from "@/lib/tarneeb/game-context";
 import { useLocalRoom } from "@/lib/tarneeb/local-room-context";
-import { legalCards, suitName, suitStrength, suitSymbol } from "@/lib/tarneeb/engine";
+import { cardLabel, legalCards, suitName, suitStrength, suitSymbol } from "@/lib/tarneeb/engine";
 import type { MatchState, Suit } from "@/lib/tarneeb/types";
 import { GameTable, LastTrickBanner } from "@/components/tarneeb/table";
 import { CurvedCardHand } from "@/components/tarneeb/card-fan";
@@ -26,7 +26,7 @@ export default function GameScreen() {
 
   return (
     <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
-      <GameTable action={<MatchActions />} fanCurve={game.settings.cardFanCurve} cardBackPattern={game.settings.cardBackPattern} tableTextSize={game.settings.tableTextSize} opponentCardDensity={game.settings.opponentCardDensity} state={state} onCardPress={(cardId) => {
+      <GameTable action={<View style={styles.tableActionRow}><MatchLogButton compact /><MatchActions /></View>} fanCurve={game.settings.cardFanCurve} cardBackPattern={game.settings.cardBackPattern} tableTextSize={game.settings.tableTextSize} opponentCardDensity={game.settings.opponentCardDensity} turnTimer={game.turnTimer} state={state} onCardPress={(cardId) => {
         const card = state.players[0].hand.find((item) => item.id === cardId);
         if (card && legalCards(state.players[0].hand, state.trick).some((item) => item.id === card.id)) {
           if (isNetworkMatch) room.requestCard(card.id);
@@ -114,6 +114,16 @@ function MatchActions() {
   return <><Pressable accessibilityRole="button" accessibilityLabel="خيارات المباراة" hitSlop={8} onPress={() => setVisible(true)} style={({ pressed }) => [styles.matchActionsButton, pressed && styles.matchActionsButtonPressed]}><Text style={styles.matchActionsButtonText}>⋮</Text></Pressable><Modal transparent visible={visible} animationType="fade" onRequestClose={close}><View style={styles.gameMenuModal}><Pressable accessibilityLabel="إغلاق خيارات المباراة" style={styles.gameMenuBackdrop} onPress={() => confirmation ? setConfirmation(null) : close()} />{confirmation ? <View style={styles.gameMenuSheet}><View style={styles.gameMenuHandle} /><Text style={styles.gameMenuTitle}>{isRestartConfirmation ? "إعادة بدء المباراة؟" : "العودة للرئيسية؟"}</Text><Text style={styles.gameMenuDescription}>{isRestartConfirmation ? (isRoomMatch ? "ستبدأ مباراة جديدة لجميع لاعبي الغرفة وستعود النقاط إلى الصفر." : "سيجري توزيع أوراق جديدة وستعود نقاط الفريقين إلى الصفر.") : (isRoomMatch ? "ستغادر الغرفة المحلية ولن تستطيع متابعة هذه المباراة من هذا الجهاز." : "ستنهي المباراة الحالية وسيُحذف التقدم المحفوظ لهذه المباراة.")}</Text><View style={styles.confirmationButtons}><Pressable onPress={() => setConfirmation(null)} style={({ pressed }) => [styles.confirmationCancel, pressed && styles.buttonPressed]}><Text style={styles.confirmationCancelText}>إلغاء</Text></Pressable><Pressable onPress={isRestartConfirmation ? restart : exit} style={({ pressed }) => [styles.confirmationDestructive, pressed && styles.buttonPressed]}><Text style={styles.confirmationDestructiveText}>{isRestartConfirmation ? "إعادة البدء" : "إنهاء المباراة"}</Text></Pressable></View></View> : <View style={styles.gameMenuSheet}><View style={styles.gameMenuHandle} /><Text style={styles.gameMenuTitle}>خيارات المباراة</Text><Text style={styles.gameMenuDescription}>تحكم في المباراة الحالية من دون مغادرة الطاولة.</Text>{canRestart ? <Pressable accessibilityRole="button" accessibilityLabel="إعادة بدء المباراة" onPress={() => setConfirmation("restart")} style={({ pressed }) => [styles.matchAction, styles.matchActionRestart, pressed && styles.buttonPressed]}><View style={styles.matchActionIcon}><Text style={styles.matchActionIconText}>↻</Text></View><View style={styles.matchActionContent}><Text style={styles.matchActionTitle}>إعادة بدء المباراة</Text><Text style={styles.matchActionSubtitle}>توزيع جديد وتصفير النقاط</Text></View></Pressable> : <View style={[styles.matchAction, styles.matchActionDisabled]}><View style={styles.matchActionIcon}><Text style={styles.matchActionIconText}>↻</Text></View><View style={styles.matchActionContent}><Text style={styles.matchActionTitle}>إعادة بدء المباراة</Text><Text style={styles.matchActionSubtitle}>متاح للمضيف فقط</Text></View></View>}<Pressable accessibilityRole="button" accessibilityLabel="إنهاء المباراة والعودة للرئيسية" onPress={() => setConfirmation("exit")} style={({ pressed }) => [styles.matchAction, styles.matchActionExit, pressed && styles.buttonPressed]}><View style={styles.matchActionIcon}><Text style={styles.matchActionIconText}>⌂</Text></View><View style={styles.matchActionContent}><Text style={styles.matchActionTitle}>إنهاء المباراة</Text><Text style={styles.matchActionSubtitle}>العودة إلى الشاشة الرئيسية</Text></View></Pressable><Pressable onPress={close} style={({ pressed }) => [styles.gameMenuCancel, pressed && styles.buttonPressed]}><Text style={styles.gameMenuCancelText}>إلغاء</Text></Pressable></View>}</View></Modal></>;
 }
 
+function MatchLogButton({ compact = false }: { compact?: boolean }) {
+  const { state } = useGame();
+  const [visible, setVisible] = useState(false);
+  const legacyBids = state.bidding.bids.map((entry) => ({ ...entry, playerName: state.players.find((player) => player.id === entry.playerId)?.name ?? `اللاعب ${entry.playerId + 1}` }));
+  const bids = state.matchLog?.bids ?? legacyBids;
+  const tricks = state.matchLog?.tricks ?? [];
+
+  return <><Pressable accessibilityRole="button" accessibilityLabel="عرض سجل المزايدات واللمم" onPress={() => setVisible(true)} style={({ pressed }) => [styles.matchLogButton, compact && styles.matchLogButtonCompact, pressed && styles.matchLogButtonPressed]}><Text style={[styles.matchLogButtonText, compact && styles.matchLogButtonTextCompact]}>{compact ? "☷" : "سجل المزايدات واللمم"}</Text></Pressable><Modal transparent visible={visible} animationType="slide" onRequestClose={() => setVisible(false)}><View style={styles.gameMenuModal}><Pressable accessibilityLabel="إغلاق سجل المباراة" style={styles.gameMenuBackdrop} onPress={() => setVisible(false)} /><View style={styles.logSheet}><View style={styles.gameMenuHandle} /><View style={styles.logSheetHeader}><View><Text style={styles.logSheetTitle}>سجل المباراة</Text><Text style={styles.logSheetSubtitle}>الجولة {state.round} · المزايدات واللمم المحسومة</Text></View><Pressable accessibilityLabel="إغلاق" onPress={() => setVisible(false)} style={({ pressed }) => [styles.logCloseButton, pressed && styles.buttonPressed]}><Text style={styles.logCloseButtonText}>×</Text></Pressable></View><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.logContent}><Text style={styles.logSectionTitle}>المزايدات</Text>{bids.length === 0 ? <Text style={styles.logEmpty}>لم تُسجّل مزايدات بعد.</Text> : bids.map((entry, index) => <View key={`${entry.playerId}-${index}`} style={styles.logBidRow}><Text style={styles.logPlayer}>{entry.playerName}</Text><Text style={[styles.logBidValue, entry.bid === null && styles.logPassValue]}>{entry.bid === null ? "مرّر" : `طلب ${entry.bid}`}</Text></View>)}<Text style={[styles.logSectionTitle, styles.logTricksTitle]}>اللمم</Text>{tricks.length === 0 ? <Text style={styles.logEmpty}>ستظهر كل لمّة فور حسمها.</Text> : [...tricks].reverse().map((entry) => <View key={entry.trickNumber} style={styles.logTrickCard}><Text style={styles.logTrickWinner}>اللمّة {entry.trickNumber} · فاز {entry.winnerName}</Text><Text style={styles.logTrickPlays}>{entry.plays.map((play) => `${play.playerName}: ${cardLabel(play.card)}`).join(" · ")}</Text></View>)}</ScrollView><Pressable onPress={() => setVisible(false)} style={({ pressed }) => [styles.logDoneButton, pressed && styles.buttonPressed]}><Text style={styles.logDoneButtonText}>العودة للمباراة</Text></Pressable></View></View></Modal></>;
+}
+
 function Feature({ label, text }: { label: string; text: string }) {
   return <View style={styles.feature}><Text style={styles.featureLabel}>{label}</Text><Text style={styles.featureText}>{text}</Text></View>;
 }
@@ -130,7 +140,7 @@ function Bidding() {
   return (
     <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <RoundHeader round={state.round} label="المزايدة" action={<MatchActions />} />
+        <RoundHeader round={state.round} label="المزايدة" action={<View style={styles.headerActionRow}><MatchLogButton compact /><MatchActions /></View>} />
         <View style={styles.panel}>
           <Text style={styles.panelEyebrow}>العرض الأعلى</Text>
           <Text style={styles.bidValue}>{highest ?? "—"}</Text>
@@ -163,7 +173,7 @@ function TrumpSelection() {
   return (
     <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
       <ScrollView contentContainerStyle={styles.trumpContent}>
-        <View style={styles.trumpTopBar}><MatchActions /></View>
+        <View style={styles.trumpTopBar}><View style={styles.headerActionRow}><MatchLogButton compact /><MatchActions /></View></View>
         <Text style={styles.kicker}>الطلب {state.bidding.highestBid}</Text>
         <Text style={styles.pageTitle}>{humanIsBidder ? "اختر الطرنيب" : "يختار الخصم الطرنيب"}</Text>
         <Text style={styles.pageSubtitle}>{humanIsBidder ? "حدد النوع الذي يمنح فريقك أفضل فرصة للفوز باللمم." : `${state.players[state.bidding.highestBidder!].name} يراجع أوراقه…`}</Text>
@@ -202,6 +212,7 @@ function RoundResult() {
         <Text style={styles.pageTitle}>{matchWinner ? `فاز ${matchWinner} بالمباراة` : summary.madeContract ? "تم تحقيق الطلب" : "لم يتحقق الطلب"}</Text>
         <Text style={styles.pageSubtitle}>كان الطلب {summary.bid}، وحصل فريقك على {summary.roundTricks[0]} لمم مقابل {summary.roundTricks[1]} للخصم.</Text>
         <View style={styles.finalScore}><ScoreBlock label="فريقك" score={state.scores[0]} change={summary.scoreChange[0]} /><View style={styles.scoreDivider} /><ScoreBlock label="الخصم" score={state.scores[1]} change={summary.scoreChange[1]} /></View>
+        <View style={styles.roundLogRow}><MatchLogButton /></View>
         {!matchWinner && (isRoomMatch && room.role !== "host" ? <Text style={styles.collectionWait}>بانتظار المضيف للمتابعة</Text> : <PrimaryButton label="الجولة التالية" onPress={isRoomMatch ? room.requestNextRound : game.nextRound} />)}
         <View style={styles.roundShortcutRow}>
           <Pressable accessibilityRole="button" accessibilityLabel="إعادة اللعب مباشرة" disabled={!canRestart} onPress={restart} style={({ pressed }) => [styles.roundShortcut, styles.roundShortcutReplay, pressed && canRestart && styles.buttonPressed, !canRestart && styles.roundShortcutDisabled]}><Text style={styles.roundShortcutIcon}>↻</Text><View><Text style={styles.roundShortcutTitle}>إعادة اللعب</Text><Text style={styles.roundShortcutHint}>{canRestart ? "مباراة جديدة فورًا" : "للمضيف فقط"}</Text></View></Pressable>
@@ -374,6 +385,14 @@ const styles = StyleSheet.create({
   matchActionsButton: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: "rgba(255,248,231,0.3)", backgroundColor: "rgba(255,248,231,0.12)", alignItems: "center", justifyContent: "center" },
   matchActionsButtonPressed: { transform: [{ scale: 0.94 }], opacity: 0.74 },
   matchActionsButtonText: { color: "#FFF8E7", fontSize: 24, fontWeight: "900", lineHeight: 24, marginTop: -5 },
+  tableActionRow: { flexDirection: "row-reverse", alignItems: "center", gap: 5 },
+  headerActionRow: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
+  roundLogRow: { alignSelf: "stretch", alignItems: "center", marginTop: 16, marginBottom: 14 },
+  matchLogButton: { minHeight: 42, paddingHorizontal: 15, borderRadius: 13, borderWidth: 1, borderColor: "rgba(227,179,65,0.65)", backgroundColor: "rgba(255,248,231,0.12)", alignItems: "center", justifyContent: "center" },
+  matchLogButtonCompact: { width: 36, minHeight: 36, paddingHorizontal: 0, borderRadius: 18, backgroundColor: "rgba(255,248,231,0.14)", borderColor: "rgba(255,248,231,0.32)" },
+  matchLogButtonPressed: { transform: [{ scale: 0.94 }], opacity: 0.74 },
+  matchLogButtonText: { color: "#FFF8E7", fontSize: 13, fontWeight: "900", writingDirection: "rtl" },
+  matchLogButtonTextCompact: { fontSize: 20, lineHeight: 21, marginTop: -2 },
   trumpTopBar: { alignSelf: "stretch", alignItems: "flex-start", marginBottom: 12 },
   gameMenuModal: { flex: 1, justifyContent: "flex-end", padding: 16 },
   gameMenuBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(3,20,14,0.78)" },
@@ -397,4 +416,23 @@ const styles = StyleSheet.create({
   confirmationCancelText: { color: "#52635C", fontSize: 14, fontWeight: "900", writingDirection: "rtl" },
   confirmationDestructive: { flex: 1, minHeight: 48, borderRadius: 14, backgroundColor: "#B8463A", alignItems: "center", justifyContent: "center" },
   confirmationDestructiveText: { color: "#FFF8E7", fontSize: 14, fontWeight: "900", writingDirection: "rtl" },
+  logSheet: { width: "100%", maxWidth: 540, maxHeight: "82%", alignSelf: "center", backgroundColor: "#FFF8E7", borderRadius: 26, padding: 20, shadowColor: "#000", shadowOpacity: 0.32, shadowRadius: 18, elevation: 12 },
+  logSheetHeader: { flexDirection: "row-reverse", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 },
+  logSheetTitle: { color: "#0E3B2E", fontSize: 21, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
+  logSheetSubtitle: { color: "#63746C", fontSize: 12, marginTop: 3, textAlign: "right", writingDirection: "rtl" },
+  logCloseButton: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#E8F0E9", alignItems: "center", justifyContent: "center" },
+  logCloseButtonText: { color: "#0E3B2E", fontSize: 26, fontWeight: "700", lineHeight: 28 },
+  logContent: { paddingBottom: 8 },
+  logSectionTitle: { color: "#0E3B2E", fontSize: 15, fontWeight: "900", textAlign: "right", writingDirection: "rtl", marginBottom: 8 },
+  logTricksTitle: { marginTop: 20 },
+  logEmpty: { color: "#718178", fontSize: 13, lineHeight: 20, textAlign: "right", writingDirection: "rtl" },
+  logBidRow: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", minHeight: 42, paddingHorizontal: 12, borderRadius: 12, backgroundColor: "#EDF5EF", marginBottom: 6 },
+  logPlayer: { flex: 1, color: "#0E3B2E", fontSize: 13, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
+  logBidValue: { color: "#0E3B2E", fontSize: 13, fontWeight: "900", writingDirection: "rtl" },
+  logPassValue: { color: "#8E594C" },
+  logTrickCard: { borderRadius: 14, padding: 12, borderWidth: 1, borderColor: "#D6E6DB", backgroundColor: "#FAFCFA", marginBottom: 8 },
+  logTrickWinner: { color: "#0E3B2E", fontSize: 13, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
+  logTrickPlays: { color: "#52635C", fontSize: 12, lineHeight: 19, textAlign: "right", marginTop: 5, writingDirection: "rtl" },
+  logDoneButton: { minHeight: 48, borderRadius: 14, backgroundColor: "#0E3B2E", alignItems: "center", justifyContent: "center", marginTop: 12 },
+  logDoneButtonText: { color: "#FFF8E7", fontSize: 14, fontWeight: "900", writingDirection: "rtl" },
 });

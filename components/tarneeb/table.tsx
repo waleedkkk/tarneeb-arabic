@@ -4,12 +4,12 @@ import { CurvedCardHand } from "./card-fan";
 import { cardLabel, legalCards, suitName, suitSymbol } from "@/lib/tarneeb/engine";
 import { getNativeTableLayout } from "@/lib/tarneeb/native-ui-layout";
 import { getOpponentCardFanLayout } from "@/lib/tarneeb/opponent-card-fan-layout";
-import type { CardBackPattern, CardFanCurve, MatchState, OpponentCardDensity, TableTextSize } from "@/lib/tarneeb/types";
+import type { CardBackPattern, CardFanCurve, MatchState, OpponentCardDensity, TableTextSize, TurnTimerSeconds } from "@/lib/tarneeb/types";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { Easing, FadeIn, FadeOut, LinearTransition, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from "react-native-reanimated";
 
-export function GameTable({ state, onCardPress, action, fanCurve, cardBackPattern, tableTextSize, opponentCardDensity }: { state: MatchState; onCardPress: (cardId: string) => void; action?: ReactNode; fanCurve: CardFanCurve; cardBackPattern: CardBackPattern; tableTextSize: TableTextSize; opponentCardDensity: OpponentCardDensity }) {
+export function GameTable({ state, onCardPress, action, fanCurve, cardBackPattern, tableTextSize, opponentCardDensity, turnTimer }: { state: MatchState; onCardPress: (cardId: string) => void; action?: ReactNode; fanCurve: CardFanCurve; cardBackPattern: CardBackPattern; tableTextSize: TableTextSize; opponentCardDensity: OpponentCardDensity; turnTimer: { durationSeconds: TurnTimerSeconds; remainingSeconds: number; isActive: boolean; isExpired: boolean } }) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const nativeLayout = getNativeTableLayout({ width, height, insets });
@@ -62,11 +62,18 @@ export function GameTable({ state, onCardPress, action, fanCurve, cardBackPatter
       </View>
 
       <View style={[styles.handArea, { height: nativeLayout.handAreaHeight, marginTop: nativeLayout.handTopMargin }]}> 
-        <View style={styles.handHeader}><Text style={[styles.handTitle, largeText && styles.handTitleLarge]}>أوراقك</Text><Text style={[styles.handHint, largeText && styles.handHintLarge]}>{humanTurn ? "اسحب ورقة للطاولة أو اضغط عليها" : "دور الخصم"}</Text></View>
+        <View style={styles.handHeader}><Text style={[styles.handTitle, largeText && styles.handTitleLarge]}>أوراقك</Text><View style={styles.handMeta}>{turnTimer.durationSeconds > 0 && (turnTimer.isActive || turnTimer.isExpired) && <TurnTimerBadge timer={turnTimer} />}<Text style={[styles.handHint, largeText && styles.handHintLarge]}>{humanTurn ? "اسحب ورقة للطاولة أو اضغط عليها" : "دور الخصم"}</Text></View></View>
         <CurvedCardHand cards={hand} accessibilityLabel="يدك مرتبة ضمن قوس متساوٍ" dragEnabled={humanTurn} entranceStep={26} curveStrength={fanCurve} cardBackPattern={cardBackPattern} dealFlip={false} disabledCardIds={!humanTurn ? hand.map((card) => card.id) : hand.filter((card) => !playable.includes(card.id)).map((card) => card.id)} onCardDragStateChange={setDraggingCard} onCardPress={onCardPress} />
       </View>
     </View>
   );
+}
+
+function TurnTimerBadge({ timer }: { timer: { durationSeconds: TurnTimerSeconds; remainingSeconds: number; isActive: boolean; isExpired: boolean } }) {
+  const isUrgent = timer.isExpired || timer.remainingSeconds <= 5;
+  const isWarning = !isUrgent && timer.remainingSeconds <= 10;
+  const progress = timer.durationSeconds === 0 ? 0 : (timer.remainingSeconds / timer.durationSeconds) * 100;
+  return <View style={[styles.timerBadge, isWarning && styles.timerBadgeWarning, isUrgent && styles.timerBadgeUrgent]}><Text style={styles.timerLabel}>{timer.isExpired ? "انتهى الوقت" : `وقت الدور ${timer.remainingSeconds} ث`}</Text><View style={styles.timerTrack}><View style={[styles.timerFill, isWarning && styles.timerFillWarning, isUrgent && styles.timerFillUrgent, { width: `${progress}%` }]} /></View></View>;
 }
 
 function TrickCard({ card, seat, collectingWinner }: { card: MatchState["trick"]["plays"][number]["card"]; seat: 0 | 1 | 2 | 3; collectingWinner: 0 | 1 | 2 | 3 | null }) {
@@ -252,8 +259,17 @@ const styles = StyleSheet.create({
   tableHint: { alignSelf: "center", marginTop: 92, color: "#D9EEE4", fontSize: 13, writingDirection: "rtl" }, tableHintLarge: { fontSize: 15 },
   handArea: { height: 140, marginTop: 10, paddingBottom: 8, alignItems: "center" },
   handHeader: { alignSelf: "stretch", flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 4, marginBottom: 6 },
+  handMeta: { flexDirection: "row", alignItems: "center", gap: 7, flexShrink: 1 },
   handTitle: { color: "#FFF8E7", fontSize: 16, fontWeight: "800", writingDirection: "rtl" }, handTitleLarge: { fontSize: 18 },
   handHint: { color: "#B4D6C7", fontSize: 12, writingDirection: "rtl" }, handHintLarge: { fontSize: 14 },
+  timerBadge: { minWidth: 74, paddingHorizontal: 7, paddingVertical: 4, borderRadius: 9, backgroundColor: "rgba(217,238,228,0.14)", borderWidth: 1, borderColor: "rgba(217,238,228,0.32)" },
+  timerBadgeWarning: { backgroundColor: "rgba(227,179,65,0.22)", borderColor: "#E3B341" },
+  timerBadgeUrgent: { backgroundColor: "rgba(196,68,58,0.28)", borderColor: "#F59892" },
+  timerLabel: { color: "#FFF8E7", fontSize: 9, lineHeight: 12, fontWeight: "900", textAlign: "center", writingDirection: "rtl" },
+  timerTrack: { height: 3, borderRadius: 3, marginTop: 3, overflow: "hidden", backgroundColor: "rgba(255,248,231,0.2)" },
+  timerFill: { height: "100%", borderRadius: 3, backgroundColor: "#9EE0C6" },
+  timerFillWarning: { backgroundColor: "#E3B341" },
+  timerFillUrgent: { backgroundColor: "#F59892" },
   lastTrick: { margin: 12, backgroundColor: "#FFF8E7", borderRadius: 18, padding: 14, alignItems: "center" },
   lastTrickTitle: { color: "#0E3B2E", fontSize: 16, fontWeight: "900", writingDirection: "rtl" },
   lastTrickDetail: { color: "#52635C", fontSize: 13, marginTop: 3, writingDirection: "rtl" },

@@ -9,6 +9,7 @@ export default function TabLayout() {
   return (
     <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: "#E3B341", tabBarInactiveTintColor: "#B4D6C7", tabBarStyle: { height: 58 + bottomPadding, paddingTop: 7, paddingBottom: bottomPadding, backgroundColor: "#0E3B2E", borderTopColor: "#16624A" }, tabBarLabelStyle: { fontSize: 11, fontWeight: "700" } }}>
       <Tabs.Screen name="index" options={{ title: "اللعبة", tabBarIcon: ({ color }) => <MaterialIcons name="style" color={color} size={23} /> }} />
+      <Tabs.Screen name="stats" options={{ title: "الإحصاءات", tabBarIcon: ({ color }) => <MaterialIcons name="bar-chart" color={color} size={23} /> }} />
       <Tabs.Screen name="rules" options={{ title: "القواعد", tabBarIcon: ({ color }) => <MaterialIcons name="menu-book" color={color} size={23} /> }} />
       <Tabs.Screen name="settings" options={{ title: "الإعدادات", tabBarIcon: ({ color }) => <MaterialIcons name="settings" color={color} size={23} /> }} />
     </Tabs>

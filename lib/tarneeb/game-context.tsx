@@ -2,8 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import { chooseAiBid, chooseAiCard, chooseAiTrump } from "./ai";
 import { advanceTrick, createHomeState, createNetworkRound, createRound, DEFAULT_SETTINGS, playCard, selectTrump, submitBid } from "./engine";
 import { haptic } from "@/lib/haptics";
-import type { Card, GameSettings, MatchState, Seat, Suit } from "./types";
-import { loadStoredMatch, loadStoredSettings, saveStoredMatch, saveStoredSettings } from "./storage";
+import type { Card, GameSettings, MatchState, RoundRecord, Seat, Suit, TurnTimerSeconds } from "./types";
+import { appendRoundRecord, loadStoredMatch, loadStoredSettings, saveStoredMatch, saveStoredSettings } from "./storage";
 import { useGameSounds } from "./use-game-sounds";
 
 type Action =
@@ -18,6 +18,13 @@ type Action =
   | { type: "NETWORK_STATE"; state: MatchState }
   | { type: "EXIT" }
   | { type: "HYDRATE"; state: MatchState };
+
+interface TurnTimerState {
+  durationSeconds: TurnTimerSeconds;
+  remainingSeconds: number;
+  isActive: boolean;
+  isExpired: boolean;
+}
 
 function reducer(state: MatchState, action: Action): MatchState {
   switch (action.type) {
@@ -71,6 +78,7 @@ interface GameContextValue {
   nextNetworkTrick: () => void;
   nextNetworkRound: () => void;
   applyNetworkState: (state: MatchState) => void;
+  turnTimer: TurnTimerState;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -82,8 +90,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     DEFAULT_SETTINGS,
   );
   const [hydrated, setHydrated] = useState(false);
+  const [turnTimer, setTurnTimer] = useState<TurnTimerState>({ durationSeconds: 0, remainingSeconds: 0, isActive: false, isExpired: false });
   const sounds = useGameSounds(settings.soundEnabled);
   const previousTrick = useRef<string | null>(null);
+  const recordedRoundKey = useRef<string | null>(null);
+  const readyToRecordStats = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -105,12 +116,84 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [hydrated, settings]);
 
   useEffect(() => {
+    if (!hydrated) return;
+    if (!readyToRecordStats.current) {
+      readyToRecordStats.current = true;
+      if (state.phase === "roundResult") {
+        recordedRoundKey.current = `${state.round}-${state.scores[0]}-${state.scores[1]}`;
+      }
+      return;
+    }
+    if (state.phase !== "roundResult" || state.matchMode !== "solo" || !state.roundSummary || state.bidding.highestBidder === null || !state.bidding.trumpSuit) {
+      if (state.phase !== "roundResult") recordedRoundKey.current = null;
+      return;
+    }
+
+    const recordKey = `${state.round}-${state.scores[0]}-${state.scores[1]}`;
+    if (recordedRoundKey.current === recordKey) return;
+    const bidder = state.players.find((player) => player.id === state.bidding.highestBidder);
+    const record: RoundRecord = {
+      roundNumber: state.round,
+      bid: state.roundSummary.bid,
+      bidderName: bidder?.name ?? `اللاعب ${(state.bidding.highestBidder ?? 0) + 1}`,
+      bidderTeam: state.roundSummary.bidderTeam,
+      trump: state.bidding.trumpSuit,
+      madeContract: state.roundSummary.madeContract,
+      tricksTeam0: state.roundSummary.roundTricks[0],
+      tricksTeam1: state.roundSummary.roundTricks[1],
+      scoreChange0: state.roundSummary.scoreChange[0],
+      scoreChange1: state.roundSummary.scoreChange[1],
+      timestamp: Date.now(),
+    };
+    recordedRoundKey.current = recordKey;
+    void appendRoundRecord(record);
+  }, [hydrated, state]);
+
+  useEffect(() => {
     const signature = state.lastTrick
       ? `${state.lastTrick.winnerId}-${state.lastTrick.plays.map((play) => play.card.id).join("-")}`
       : null;
     if (signature && signature !== previousTrick.current) sounds.playTrick();
     previousTrick.current = signature;
   }, [sounds, state.lastTrick]);
+
+  const humanSoloTurn = state.matchMode === "solo" && (
+    (state.phase === "bidding" && state.bidding.currentPlayer === 0)
+    || (state.phase === "trump" && state.bidding.highestBidder === 0)
+    || (state.phase === "playing" && (state.trick.plays.length === 0
+      ? state.trick.leaderId === 0
+      : state.trick.plays.at(-1)?.playerId === 3))
+  );
+  const timerTurnKey = `${state.round}-${state.phase}-${state.bidding.currentPlayer}-${state.bidding.highestBidder ?? "none"}-${state.trick.leaderId}-${state.trick.plays.map((play) => play.card.id).join("-")}`;
+
+  useEffect(() => {
+    const durationSeconds = settings.turnTimerSeconds;
+    if (!humanSoloTurn || durationSeconds === 0) {
+      setTurnTimer({ durationSeconds, remainingSeconds: 0, isActive: false, isExpired: false });
+      return;
+    }
+
+    const startedAt = Date.now();
+    let alertPlayed = false;
+    const updateRemainingTime = () => {
+      const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
+      const remainingSeconds = Math.max(0, durationSeconds - elapsedSeconds);
+      if (!alertPlayed && remainingSeconds <= 5) {
+        alertPlayed = true;
+        sounds.playTimerAlert();
+      }
+      setTurnTimer({
+        durationSeconds,
+        remainingSeconds,
+        isActive: remainingSeconds > 0,
+        isExpired: remainingSeconds === 0,
+      });
+    };
+
+    updateRemainingTime();
+    const interval = setInterval(updateRemainingTime, 500);
+    return () => clearInterval(interval);
+  }, [humanSoloTurn, settings.turnTimerSeconds, sounds.playTimerAlert, timerTurnKey]);
 
   const feedback = useCallback(
     (kind: "light" | "success" | "error" = "light") => {
@@ -214,8 +297,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         dispatch({ type: "NEXT_NETWORK_ROUND" });
       },
       applyNetworkState: (nextState) => dispatch({ type: "NETWORK_STATE", state: nextState }),
+      turnTimer,
     }),
-    [feedback, settings, sounds, state],
+    [feedback, settings, sounds, state, turnTimer],
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

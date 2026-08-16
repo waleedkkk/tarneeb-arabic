@@ -9,6 +9,8 @@ export type CardFanCurve = "gentle" | "balanced" | "deep";
 export type CardBackPattern = "royal" | "navy" | "emerald";
 export type TableTextSize = "normal" | "large";
 export type OpponentCardDensity = "compact" | "balanced" | "spacious";
+/** الصفر يعني إخفاء مؤقّت الدور بالكامل. */
+export type TurnTimerSeconds = 0 | 30 | 45 | 60;
 
 export interface Card {
   id: string;
@@ -51,12 +53,47 @@ export interface BiddingState {
   trumpSuit: Suit | null;
 }
 
+/** سجل مزايدة يظل متاحًا حتى بعد انتهاء مرحلة المزايدة. */
+export interface BidLogEntry {
+  playerId: Seat;
+  playerName: string;
+  bid: number | null;
+}
+
+/** سجل اللمّة المحسومة مع الأوراق وأسماء أصحابها لعرضها أثناء المباراة. */
+export interface TrickLogEntry {
+  trickNumber: number;
+  winnerId: Seat;
+  winnerName: string;
+  plays: Array<Play & { playerName: string }>;
+}
+
+export interface MatchLog {
+  bids: BidLogEntry[];
+  tricks: TrickLogEntry[];
+}
+
 export interface RoundSummary {
   bid: number;
   bidderTeam: Team;
   madeContract: boolean;
   roundTricks: Record<Team, number>;
   scoreChange: Record<Team, number>;
+}
+
+/** لقطة خفيفة قابلة للحفظ لنتيجة جولة مكتملة على هذا الجهاز. */
+export interface RoundRecord {
+  roundNumber: number;
+  bid: number;
+  bidderName: string;
+  bidderTeam: Team;
+  trump: Suit;
+  madeContract: boolean;
+  tricksTeam0: number;
+  tricksTeam1: number;
+  scoreChange0: number;
+  scoreChange1: number;
+  timestamp: number;
 }
 
 export interface GameSettings {
@@ -69,6 +106,7 @@ export interface GameSettings {
   cardBackPattern: CardBackPattern;
   tableTextSize: TableTextSize;
   opponentCardDensity: OpponentCardDensity;
+  turnTimerSeconds: TurnTimerSeconds;
 }
 
 export interface MatchState {
@@ -82,4 +120,5 @@ export interface MatchState {
   tricksWon: Record<Team, number>;
   scores: Record<Team, number>;
   roundSummary: RoundSummary | null;
+  matchLog: MatchLog;
 }
