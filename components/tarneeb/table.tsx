@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { Image, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { CardBack, PlayingCard } from "./card";
 import { CurvedCardHand } from "./card-fan";
 import { cardLabel, legalCards, suitName, suitSymbol } from "@/lib/tarneeb/engine";
@@ -21,6 +21,7 @@ export function GameTable({ state, onCardPress, action, fanCurve, cardBackPatter
   const bidder = state.bidding.highestBidder === null ? null : state.players[state.bidding.highestBidder];
   const hand = state.players[0].hand;
   const [draggingCard, setDraggingCard] = useState(false);
+  const [selectedPersona, setSelectedPersona] = useState<ReturnType<typeof getAiPersona> | null>(null);
   const largeText = tableTextSize === "large";
   const theme = TABLE_THEMES[tableTheme];
 
@@ -45,9 +46,9 @@ export function GameTable({ state, onCardPress, action, fanCurve, cardBackPatter
       </View>
 
       <View style={[styles.table, { backgroundColor: theme.table, borderColor: theme.border, minHeight: nativeLayout.tableMinHeight, maxHeight: nativeLayout.tableMaxHeight, marginTop: nativeLayout.tableTopMargin }]}>
-        <PlayerSeat name={state.players[2].name} persona={state.players[2].personaId ? getAiPersona(state.players[2].personaId) : undefined} cards={state.players[2].handCount} position="top" active={currentSeat(state) === 2} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} />
-        <PlayerSeat name={state.players[3].name} persona={state.players[3].personaId ? getAiPersona(state.players[3].personaId) : undefined} cards={state.players[3].handCount} position="left" active={currentSeat(state) === 3} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} />
-        <PlayerSeat name={state.players[1].name} persona={state.players[1].personaId ? getAiPersona(state.players[1].personaId) : undefined} cards={state.players[1].handCount} position="right" active={currentSeat(state) === 1} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} />
+        <PlayerSeat name={state.players[2].name} persona={state.players[2].personaId ? getAiPersona(state.players[2].personaId) : undefined} cards={state.players[2].handCount} position="top" active={currentSeat(state) === 2} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} onPersonaPress={setSelectedPersona} />
+        <PlayerSeat name={state.players[3].name} persona={state.players[3].personaId ? getAiPersona(state.players[3].personaId) : undefined} cards={state.players[3].handCount} position="left" active={currentSeat(state) === 3} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} onPersonaPress={setSelectedPersona} />
+        <PlayerSeat name={state.players[1].name} persona={state.players[1].personaId ? getAiPersona(state.players[1].personaId) : undefined} cards={state.players[1].handCount} position="right" active={currentSeat(state) === 1} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} onPersonaPress={setSelectedPersona} />
 
         <View style={styles.trickArea}>
           {humanTurn && (
@@ -67,6 +68,7 @@ export function GameTable({ state, onCardPress, action, fanCurve, cardBackPatter
         <View style={styles.handHeader}><Text style={[styles.handTitle, largeText && styles.handTitleLarge]}>أوراقك</Text><View style={styles.handMeta}>{turnTimer.durationSeconds > 0 && (turnTimer.isActive || turnTimer.isExpired) && <TurnTimerBadge timer={turnTimer} />}<Text style={[styles.handHint, largeText && styles.handHintLarge]}>{humanTurn ? "اسحب ورقة للطاولة أو اضغط عليها" : "دور الخصم"}</Text></View></View>
         <CurvedCardHand cards={hand} accessibilityLabel="يدك مرتبة ضمن قوس متساوٍ" dragEnabled={humanTurn} entranceStep={26} curveStrength={fanCurve} cardBackPattern={cardBackPattern} cardFaceTheme={cardFaceTheme} animationSpeed={animationSpeed} dealFlip={false} disabledCardIds={!humanTurn ? hand.map((card) => card.id) : hand.filter((card) => !playable.includes(card.id)).map((card) => card.id)} onCardDragStateChange={setDraggingCard} onCardPress={onCardPress} />
       </View>
+      <PersonaInfoCard persona={selectedPersona} onClose={() => setSelectedPersona(null)} />
     </View>
   );
 }
@@ -145,7 +147,7 @@ function currentSeat(state: MatchState) {
   return state.trick.plays.length === 0 ? state.trick.leaderId : ((state.trick.plays.at(-1)!.playerId + 1) % 4);
 }
 
-function PlayerSeat({ name, persona, cards, position, active, cardBackPattern, density, largeText }: { name: string; persona?: ReturnType<typeof getAiPersona>; cards: number; position: "top" | "left" | "right"; active: boolean; cardBackPattern: CardBackPattern; density: OpponentCardDensity; largeText: boolean }) {
+function PlayerSeat({ name, persona, cards, position, active, cardBackPattern, density, largeText, onPersonaPress }: { name: string; persona?: ReturnType<typeof getAiPersona>; cards: number; position: "top" | "left" | "right"; active: boolean; cardBackPattern: CardBackPattern; density: OpponentCardDensity; largeText: boolean; onPersonaPress: (persona: ReturnType<typeof getAiPersona>) => void }) {
   const isSideSeat = position !== "top";
   const cardRotation = position === "left" ? "90deg" : "-90deg";
   const fan = getOpponentCardFanLayout(cards, position, density);
@@ -169,7 +171,7 @@ function PlayerSeat({ name, persona, cards, position, active, cardBackPattern, d
 
   return (
       <View style={[styles.playerSeat, styles[position], active && styles.activeSeat]}>
-        <View style={styles.avatar}>{persona ? <Image source={{ uri: persona.avatarUri }} style={styles.avatarImage} accessibilityLabel={`الصورة الرمزية للاعب ${persona.name}`} /> : <Text style={styles.avatarText}>{name.slice(0, 1)}</Text>}</View>
+        <Pressable accessibilityRole={persona ? "button" : undefined} accessibilityLabel={persona ? `عرض بطاقة ${persona.name}` : name} disabled={!persona} onPress={() => persona && onPersonaPress(persona)} style={({ pressed }) => [styles.avatar, pressed && styles.avatarPressed]}>{persona ? <Image source={{ uri: persona.avatarUri }} style={styles.avatarImage} accessibilityLabel={`الصورة الرمزية للاعب ${persona.name}`} /> : <Text style={styles.avatarText}>{name.slice(0, 1)}</Text>}</Pressable>
         <View style={styles.seatDetails}>
           <View style={styles.nameRow}>
               <View style={styles.playerIdentity}><Text style={[styles.playerName, largeText && styles.playerNameLarge]}>{name}</Text>{persona && <Text numberOfLines={1} style={styles.personaLabel}>{persona.title}</Text>}</View>
@@ -189,6 +191,32 @@ function PlayerSeat({ name, persona, cards, position, active, cardBackPattern, d
         </Animated.View>
       </View>
     </View>
+  );
+}
+
+function PersonaInfoCard({ persona, onClose }: { persona: ReturnType<typeof getAiPersona> | null; onClose: () => void }) {
+  return (
+    <Modal visible={persona !== null} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+      <View style={styles.personaModal}>
+        <Pressable accessibilityRole="button" accessibilityLabel="إغلاق بطاقة تعريف الخصم" onPress={onClose} style={styles.personaBackdrop} />
+        {persona && (
+          <View accessibilityViewIsModal style={styles.personaCard}>
+            <View style={styles.personaCardHeader}>
+              <Image source={{ uri: persona.avatarUri }} style={styles.personaCardAvatar} accessibilityLabel={`الصورة الرمزية للاعب ${persona.name}`} />
+              <View style={styles.personaCardTitleGroup}>
+                <Text style={styles.personaCardEyebrow}>ملف الخصم</Text>
+                <Text style={styles.personaCardTitle}>{persona.name} · {persona.title}</Text>
+              </View>
+            </View>
+            <View style={styles.personaTendencyPill}><Text style={styles.personaTendencyText}>أسلوب اللعب: {persona.tendency}</Text></View>
+            <Text style={styles.personaCardDescription}>{persona.description}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="إغلاق بطاقة تعريف الخصم" onPress={onClose} style={({ pressed }) => [styles.personaCloseButton, pressed && styles.personaCloseButtonPressed]}>
+              <Text style={styles.personaCloseText}>إغلاق</Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
+    </Modal>
   );
 }
 
@@ -243,6 +271,7 @@ const styles = StyleSheet.create({
   right: { right: 8, top: "50%", flexDirection: "row-reverse", transform: [{ translateY: -103 }] },
   activeSeat: { backgroundColor: "rgba(251,191,36,0.2)", borderColor: "#FBBF24", shadowColor: "#FBBF24", shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 0 }, elevation: 5 },
   avatar: { width: 26, height: 26, borderRadius: 13, overflow: "hidden", backgroundColor: "#E3B341", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#FFF8E7" },
+  avatarPressed: { opacity: 0.76, transform: [{ scale: 0.92 }] },
   avatarImage: { width: "100%", height: "100%" },
   avatarText: { color: "#17211D", fontWeight: "900", fontSize: 13 },
   seatDetails: { alignItems: "center" },
@@ -285,4 +314,18 @@ const styles = StyleSheet.create({
   lastTrick: { margin: 12, backgroundColor: "#FFF8E7", borderRadius: 18, padding: 14, alignItems: "center" },
   lastTrickTitle: { color: "#0E3B2E", fontSize: 16, fontWeight: "900", writingDirection: "rtl" },
   lastTrickDetail: { color: "#52635C", fontSize: 13, marginTop: 3, writingDirection: "rtl" },
+  personaModal: { flex: 1, justifyContent: "center", paddingHorizontal: 24 },
+  personaBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(5, 25, 18, 0.72)" },
+  personaCard: { borderRadius: 24, padding: 18, backgroundColor: "#FFF8E7", borderWidth: 1, borderColor: "#E3B341", shadowColor: "#000", shadowOpacity: 0.32, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 12 },
+  personaCardHeader: { flexDirection: "row-reverse", alignItems: "center", gap: 12 },
+  personaCardAvatar: { width: 58, height: 58, borderRadius: 29, backgroundColor: "#E3B341", borderWidth: 2, borderColor: "#0E3B2E" },
+  personaCardTitleGroup: { flex: 1, alignItems: "flex-end" },
+  personaCardEyebrow: { color: "#6F5A22", fontSize: 11, lineHeight: 14, fontWeight: "800", writingDirection: "rtl" },
+  personaCardTitle: { color: "#0E3B2E", fontSize: 18, lineHeight: 24, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
+  personaTendencyPill: { alignSelf: "flex-end", marginTop: 14, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: "#D9EEE4" },
+  personaTendencyText: { color: "#0E3B2E", fontSize: 12, lineHeight: 16, fontWeight: "800", writingDirection: "rtl" },
+  personaCardDescription: { marginTop: 12, color: "#40544B", fontSize: 14, lineHeight: 21, textAlign: "right", writingDirection: "rtl" },
+  personaCloseButton: { alignSelf: "stretch", alignItems: "center", marginTop: 18, paddingVertical: 11, borderRadius: 13, backgroundColor: "#0E3B2E" },
+  personaCloseButtonPressed: { opacity: 0.84, transform: [{ scale: 0.98 }] },
+  personaCloseText: { color: "#FFF8E7", fontSize: 14, lineHeight: 18, fontWeight: "900", writingDirection: "rtl" },
 });
