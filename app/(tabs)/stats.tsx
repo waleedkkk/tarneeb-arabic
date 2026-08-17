@@ -1,3 +1,4 @@
+import { arabicRow } from "@/lib/rtl-style";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useState } from "react";
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
@@ -68,24 +69,24 @@ const styles = StyleSheet.create({
   content: { padding: 18, paddingBottom: 34 },
   title: { color: "#FFF8E7", fontSize: 30, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
   subtitle: { color: "#B4D6C7", fontSize: 13, lineHeight: 20, textAlign: "right", marginTop: 4, writingDirection: "rtl" },
-  metricGrid: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 10, marginTop: 18 },
+  metricGrid: { flexDirection: arabicRow(), flexWrap: "wrap", gap: 10, marginTop: 18 },
   metric: { width: "48%", minHeight: 101, borderRadius: 18, padding: 13, alignItems: "flex-end", backgroundColor: "#16624A", borderWidth: 1, borderColor: "rgba(245,216,137,0.24)" },
   metricValue: { color: "#FFF8E7", fontSize: 25, lineHeight: 30, fontWeight: "900", writingDirection: "rtl" },
   metricLabel: { color: "#F5D889", fontSize: 12, fontWeight: "800", marginTop: 4, writingDirection: "rtl" },
   metricDetail: { color: "#B4D6C7", fontSize: 11, marginTop: 2, writingDirection: "rtl" },
   positive: { color: "#9EE0C6" }, negative: { color: "#F59892" },
-  historyHeader: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginTop: 25, marginBottom: 10 },
+  historyHeader: { flexDirection: arabicRow(), justifyContent: "space-between", alignItems: "center", marginTop: 25, marginBottom: 10 },
   historyTitle: { color: "#FFF8E7", fontSize: 18, fontWeight: "900", writingDirection: "rtl" },
   clearButton: { borderRadius: 10, borderWidth: 1, borderColor: "rgba(245,152,146,0.6)", paddingHorizontal: 10, paddingVertical: 6 },
   clearText: { color: "#F59892", fontSize: 12, fontWeight: "800", writingDirection: "rtl" },
   card: { backgroundColor: "#16624A", borderRadius: 18, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: "rgba(255,248,231,0.13)" },
-  cardTop: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between" },
+  cardTop: { flexDirection: arabicRow(), alignItems: "center", justifyContent: "space-between" },
   roundTitle: { color: "#FFF8E7", fontSize: 16, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
   date: { color: "#B4D6C7", fontSize: 11, textAlign: "right", marginTop: 2, writingDirection: "rtl" },
   resultBadge: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 5 }, resultSuccess: { backgroundColor: "rgba(158,224,198,0.18)" }, resultFailed: { backgroundColor: "rgba(245,152,146,0.16)" },
   resultText: { color: "#FFF8E7", fontSize: 11, fontWeight: "800", writingDirection: "rtl" },
   contract: { color: "#F5D889", fontSize: 13, textAlign: "right", marginTop: 12, writingDirection: "rtl" },
-  cardStats: { flexDirection: "row-reverse", justifyContent: "space-between", marginTop: 13, paddingTop: 11, borderTopWidth: 1, borderTopColor: "rgba(255,248,231,0.11)" },
+  cardStats: { flexDirection: arabicRow(), justifyContent: "space-between", marginTop: 13, paddingTop: 11, borderTopWidth: 1, borderTopColor: "rgba(255,248,231,0.11)" },
   cardStatValue: { color: "#FFF8E7", fontSize: 18, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
   cardStatLabel: { color: "#B4D6C7", fontSize: 10, marginTop: 2, writingDirection: "rtl" },
   empty: { alignItems: "center", backgroundColor: "#16624A", borderRadius: 20, borderWidth: 1, borderColor: "rgba(245,216,137,0.22)", padding: 24, marginTop: 4 },

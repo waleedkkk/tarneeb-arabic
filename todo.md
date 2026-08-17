@@ -186,3 +186,11 @@
 - [x] إصلاح تخطيط شاشة المزايدة باعتماد insets.bottom ديناميكيًا بدل الحافة السفلية في Bidding وTrumpSelection وRoundResult.
 - [x] التحقق بالاختبارات (45 اختبارًا) وفحوص الشفرة وحفظ النسخة.
 - [x] فحص فرضية حذف أصناف CSS أثناء البناء (Tailwind purge): مرفوضة — أزرار الأرقام تُولّد برمجيًا بأنماط StyleSheet ولا علاقة لها بـ NativeWind.
+
+## RTL أصلي عبر I18nManager (APK)
+- [x] إنشاء lib/rtl.ts بـ enableRTL() واستدعاؤه في app/_layout.tsx قبل أي رندر مع إعادة تشغيل تلقائي عند أول تفعيل
+- [x] إنشاء lib/rtl-style.ts بمصدر حقيقة واحد (isRTL/isNativeRTL/isWebRTL) ودالة arabicRow()
+- [x] ترقية row-reverse اليدوية في index.tsx/settings.tsx/rules.tsx/stats.tsx/local-room-sheet.tsx إلى arabicRow()
+- [x] توثيق جزيرة الطاولة (components/tarneeb/table.tsx) كحاوية ltr معزولة عمدًا عن RTL الأصلي
+- [x] إضافة اختبار وحدة rtl-style.test.ts (48 اختبارًا ناجحًا)
+- [x] فحوص TypeScript وESLint نظيفة

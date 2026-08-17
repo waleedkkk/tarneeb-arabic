@@ -20,8 +20,10 @@ export const ANDROID_TEST_VIEWPORTS = {
 } as const satisfies Record<string, NativeViewport>;
 
 /**
- * Keeps the native root LTR so Android does not mirror positional properties,
- * then lets Arabic rows opt in to row-reverse explicitly.
+ * اتجاهات الطاولة المرسومة يدويًا (جزر هندسية):
+ * مع تفعيل RTL الأصلي عبر I18nManager، تُثبَّت حاوية الطاولة على ltr عمدًا
+ * حتى لا ينعكس نظام إحداثيات المقاعد والأوراق المرسومة؛ النص العربي داخلها
+ * يحمل writingDirection: rtl صراحة. المقاعد اليسرى/اليمنى تُحدد بصراحة كذلك.
  */
 export const NATIVE_LAYOUT_DIRECTION = {
   root: "ltr" as const,
