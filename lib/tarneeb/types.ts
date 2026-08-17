@@ -11,6 +11,14 @@ export type TableTextSize = "normal" | "large";
 export type OpponentCardDensity = "compact" | "balanced" | "spacious";
 /** الصفر يعني إخفاء مؤقّت الدور بالكامل. */
 export type TurnTimerSeconds = 0 | 30 | 45 | 60;
+/** مستوى تقدير الخصم لقوة اليد وقراءته للأوراق الظاهرة. */
+export type AiLevel = "مبتدئ" | "متوازن" | "خبير";
+/** نزعة مستقلة تغيّر المخاطرة بعد اختيار مستوى المهارة. */
+export type AiStyle = "حذر" | "متوازن" | "مبادر";
+export type TableTheme = "emerald" | "midnight" | "sand";
+export type CardFaceTheme = "ivory" | "parchment" | "midnight";
+export type SoundProfile = "هادئة" | "متوازنة" | "بارزة";
+export type AnimationSpeed = "هادئة" | "متوازنة" | "سريعة";
 
 export interface Card {
   id: string;
@@ -98,7 +106,12 @@ export interface RoundRecord {
 
 export interface GameSettings {
   targetScore: 31 | 41 | 61;
-  aiLevel: "هادئ" | "متوازن" | "جريء";
+  aiLevel: AiLevel;
+  aiStyle: AiStyle;
+  tableTheme: TableTheme;
+  cardFaceTheme: CardFaceTheme;
+  soundProfile: SoundProfile;
+  animationSpeed: AnimationSpeed;
   hapticsEnabled: boolean;
   soundEnabled: boolean;
   showStrengthIndicator: boolean;

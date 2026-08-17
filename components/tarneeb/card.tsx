@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, type Insets, View } from "react-native";
 import { cardLabel, rankLabel, suitSymbol } from "@/lib/tarneeb/engine";
-import type { Card as CardType, CardBackPattern } from "@/lib/tarneeb/types";
+import type { AnimationSpeed, Card as CardType, CardBackPattern, CardFaceTheme } from "@/lib/tarneeb/types";
 import { useEffect } from "react";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from "react-native-reanimated";
 
@@ -15,10 +15,14 @@ interface CardProps {
   entranceDelay?: number;
   dealFlip?: boolean;
   cardBackPattern?: CardBackPattern;
+  cardFaceTheme?: CardFaceTheme;
+  animationSpeed?: AnimationSpeed;
 }
 
-export function PlayingCard({ card, onPress, disabled = false, selected = false, compact = false, hitSlop, edgeFeedback = false, entranceDelay = 0, dealFlip = false, cardBackPattern = "royal" }: CardProps) {
+export function PlayingCard({ card, onPress, disabled = false, selected = false, compact = false, hitSlop, edgeFeedback = false, entranceDelay = 0, dealFlip = false, cardBackPattern = "royal", cardFaceTheme = "ivory", animationSpeed = "متوازنة" }: CardProps) {
   const red = card.suit === "hearts" || card.suit === "diamonds";
+  const faceTheme = CARD_FACE_THEMES[cardFaceTheme];
+  const motion = animationSpeed === "هادئة" ? 1.28 : animationSpeed === "سريعة" ? 0.72 : 1;
   const reveal = useSharedValue(0);
   const flip = useSharedValue(dealFlip ? 0 : 1);
   const lift = useSharedValue(selected ? -8 : 0);
@@ -27,13 +31,13 @@ export function PlayingCard({ card, onPress, disabled = false, selected = false,
   useEffect(() => {
     reveal.value = 0;
     flip.value = dealFlip ? 0 : 1;
-    reveal.value = withDelay(entranceDelay, withTiming(1, { duration: compact ? 190 : 260, easing: Easing.out(Easing.cubic) }));
-    if (dealFlip) flip.value = withDelay(entranceDelay + 45, withTiming(1, { duration: compact ? 210 : 270, easing: Easing.inOut(Easing.cubic) }));
-  }, [compact, dealFlip, entranceDelay, flip, reveal]);
+    reveal.value = withDelay(entranceDelay, withTiming(1, { duration: (compact ? 190 : 260) * motion, easing: Easing.out(Easing.cubic) }));
+    if (dealFlip) flip.value = withDelay(entranceDelay + 45 * motion, withTiming(1, { duration: (compact ? 210 : 270) * motion, easing: Easing.inOut(Easing.cubic) }));
+  }, [animationSpeed, compact, dealFlip, entranceDelay, flip, motion, reveal]);
 
   useEffect(() => {
-    lift.value = withTiming(selected ? -8 : 0, { duration: 150, easing: Easing.out(Easing.cubic) });
-  }, [lift, selected]);
+    lift.value = withTiming(selected ? -8 : 0, { duration: 150 * motion, easing: Easing.out(Easing.cubic) });
+  }, [lift, motion, selected]);
 
   const revealStyle = useAnimatedStyle(() => ({
     opacity: reveal.value,
@@ -61,11 +65,11 @@ export function PlayingCard({ card, onPress, disabled = false, selected = false,
   };
   const content = (
     <Animated.View style={[styles.cardStage, compact && styles.compactCardStage, revealStyle]}>
-      <Animated.View style={[styles.card, styles.cardFace, compact && styles.compactCard, selected && styles.selectedCard, disabled && styles.disabledCard, faceFlipStyle]}>
+      <Animated.View style={[styles.card, styles.cardFace, faceTheme.card, compact && styles.compactCard, selected && styles.selectedCard, disabled && styles.disabledCard, faceFlipStyle]}>
         {edgeFeedback && !disabled && <Animated.View pointerEvents="none" style={[styles.edgeGlow, edgeGlowStyle]} />}
-        <Text style={[styles.rank, compact && styles.compactRank, red ? styles.red : styles.black]}>{rankLabel(card.rank)}</Text>
-        <Text style={[styles.suit, compact && styles.compactSuit, red ? styles.red : styles.black]}>{suitSymbol(card.suit)}</Text>
-        {!compact && <Text style={[styles.centerSuit, red ? styles.red : styles.black]}>{suitSymbol(card.suit)}</Text>}
+        <Text style={[styles.rank, compact && styles.compactRank, red ? [styles.red, faceTheme.red] : faceTheme.black]}>{rankLabel(card.rank)}</Text>
+        <Text style={[styles.suit, compact && styles.compactSuit, red ? [styles.red, faceTheme.red] : faceTheme.black]}>{suitSymbol(card.suit)}</Text>
+        {!compact && <Text style={[styles.centerSuit, red ? [styles.red, faceTheme.red] : faceTheme.black]}>{suitSymbol(card.suit)}</Text>}
       </Animated.View>
       {dealFlip && <Animated.View pointerEvents="none" style={[styles.cardBackFace, backFlipStyle]}><CardBack compact={compact} pattern={cardBackPattern} size="card" /></Animated.View>}
     </Animated.View>
@@ -198,10 +202,22 @@ const styles = StyleSheet.create({
   emeraldMedallion: { backgroundColor: "#16513D", borderColor: "#EDF0C8" },
   emeraldMedallionInner: { backgroundColor: "#2E795A", borderColor: "#D4DD9A" },
   emeraldMark: { color: "#FFFFE6" },
+  parchmentCard: { backgroundColor: "#F1E3C1", borderColor: "#B8955D" },
+  parchmentBlack: { color: "#3B2B1B" },
+  parchmentRed: { color: "#AA3B32" },
+  midnightCard: { backgroundColor: "#24344D", borderColor: "#A8C3D8" },
+  midnightBlack: { color: "#F3F8FC" },
+  midnightRed: { color: "#FF9A8D" },
 });
 
 const CARD_BACK_THEMES = {
   royal: { frame: styles.royalFrame, inner: styles.royalInner, pattern: styles.royalPattern, medallion: styles.royalMedallion, medallionInner: styles.royalMedallionInner, mark: styles.royalMark },
   navy: { frame: styles.navyFrame, inner: styles.navyInner, pattern: styles.navyPattern, medallion: styles.navyMedallion, medallionInner: styles.navyMedallionInner, mark: styles.navyMark },
   emerald: { frame: styles.emeraldFrame, inner: styles.emeraldInner, pattern: styles.emeraldPattern, medallion: styles.emeraldMedallion, medallionInner: styles.emeraldMedallionInner, mark: styles.emeraldMark },
+} as const;
+
+const CARD_FACE_THEMES = {
+  ivory: { card: {} as object, black: styles.black, red: styles.red },
+  parchment: { card: styles.parchmentCard, black: styles.parchmentBlack, red: styles.parchmentRed },
+  midnight: { card: styles.midnightCard, black: styles.midnightBlack, red: styles.midnightRed },
 } as const;

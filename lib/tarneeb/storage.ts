@@ -50,7 +50,21 @@ export async function saveStoredMatch(state: MatchState): Promise<void> {
 export async function loadStoredSettings(): Promise<Partial<GameSettings> | null> {
   try {
     const raw = await AsyncStorage.getItem(SETTINGS_KEY);
-    return raw ? (JSON.parse(raw) as Partial<GameSettings>) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Omit<Partial<GameSettings>, "aiLevel"> & { aiLevel?: GameSettings["aiLevel"] | "هادئ" | "جريء" };
+    // تحافظ النسخ السابقة على أسلوبها عند الانتقال من خيار واحد إلى مستوى + أسلوب.
+    const legacyStyle = parsed.aiLevel === "هادئ" ? "حذر" : parsed.aiLevel === "جريء" ? "مبادر" : undefined;
+    const aiLevel = parsed.aiLevel === "مبتدئ" || parsed.aiLevel === "متوازن" || parsed.aiLevel === "خبير"
+      ? parsed.aiLevel
+      : "متوازن";
+    const aiStyle = parsed.aiStyle === "حذر" || parsed.aiStyle === "متوازن" || parsed.aiStyle === "مبادر"
+      ? parsed.aiStyle
+      : legacyStyle ?? "متوازن";
+    const tableTheme = parsed.tableTheme === "emerald" || parsed.tableTheme === "midnight" || parsed.tableTheme === "sand" ? parsed.tableTheme : "emerald";
+    const cardFaceTheme = parsed.cardFaceTheme === "ivory" || parsed.cardFaceTheme === "parchment" || parsed.cardFaceTheme === "midnight" ? parsed.cardFaceTheme : "ivory";
+    const soundProfile = parsed.soundProfile === "هادئة" || parsed.soundProfile === "متوازنة" || parsed.soundProfile === "بارزة" ? parsed.soundProfile : "متوازنة";
+    const animationSpeed = parsed.animationSpeed === "هادئة" || parsed.animationSpeed === "متوازنة" || parsed.animationSpeed === "سريعة" ? parsed.animationSpeed : "متوازنة";
+    return { ...parsed, aiLevel, aiStyle, tableTheme, cardFaceTheme, soundProfile, animationSpeed };
   } catch {
     return null;
   }

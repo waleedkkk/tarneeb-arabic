@@ -1,14 +1,18 @@
 import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { useCallback, useEffect } from "react";
+import type { SoundProfile } from "./types";
 
 const shuffleSource = require("../../assets/sounds/card-shuffle.mp3");
 const cardSource = require("../../assets/sounds/card-place.mp3");
 const trickSource = require("../../assets/sounds/trick-win.mp3");
 const timerAlertSource = require("../../assets/sounds/timer-alert.mp3");
 
-function replay(player: ReturnType<typeof useAudioPlayer>, enabled: boolean) {
+const SOUND_VOLUME: Record<SoundProfile, number> = { "هادئة": 0.42, "متوازنة": 0.7, "بارزة": 0.95 };
+
+function replay(player: ReturnType<typeof useAudioPlayer>, enabled: boolean, profile: SoundProfile) {
   if (!enabled) return;
   try {
+    player.volume = SOUND_VOLUME[profile];
     player.seekTo(0);
     player.play();
   } catch {
@@ -16,7 +20,7 @@ function replay(player: ReturnType<typeof useAudioPlayer>, enabled: boolean) {
   }
 }
 
-export function useGameSounds(enabled: boolean) {
+export function useGameSounds(enabled: boolean, profile: SoundProfile) {
   const shufflePlayer = useAudioPlayer(shuffleSource);
   const cardPlayer = useAudioPlayer(cardSource);
   const trickPlayer = useAudioPlayer(trickSource);
@@ -27,9 +31,9 @@ export function useGameSounds(enabled: boolean) {
   }, []);
 
   return {
-    playShuffle: useCallback(() => replay(shufflePlayer, enabled), [enabled, shufflePlayer]),
-    playCard: useCallback(() => replay(cardPlayer, enabled), [enabled, cardPlayer]),
-    playTrick: useCallback(() => replay(trickPlayer, enabled), [enabled, trickPlayer]),
-    playTimerAlert: useCallback(() => replay(timerAlertPlayer, enabled), [enabled, timerAlertPlayer]),
+    playShuffle: useCallback(() => replay(shufflePlayer, enabled, profile), [enabled, profile, shufflePlayer]),
+    playCard: useCallback(() => replay(cardPlayer, enabled, profile), [enabled, profile, cardPlayer]),
+    playTrick: useCallback(() => replay(trickPlayer, enabled, profile), [enabled, profile, trickPlayer]),
+    playTimerAlert: useCallback(() => replay(timerAlertPlayer, enabled, profile), [enabled, profile, timerAlertPlayer]),
   };
 }

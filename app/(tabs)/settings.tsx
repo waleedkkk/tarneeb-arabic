@@ -2,7 +2,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-nat
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useGame } from "@/lib/tarneeb/game-context";
 import { CardBack } from "@/components/tarneeb/card";
-import type { CardBackPattern, CardFanCurve, OpponentCardDensity, TableTextSize, TurnTimerSeconds } from "@/lib/tarneeb/types";
+import type { AiLevel, AiStyle, AnimationSpeed, CardBackPattern, CardFaceTheme, CardFanCurve, OpponentCardDensity, SoundProfile, TableTextSize, TableTheme, TurnTimerSeconds } from "@/lib/tarneeb/types";
 
 const CARD_FAN_CURVES: { value: CardFanCurve; label: string }[] = [
   { value: "gentle", label: "خفيف" },
@@ -29,6 +29,36 @@ const TURN_TIMER_OPTIONS: { value: TurnTimerSeconds; label: string }[] = [
   { value: 45, label: "45 ث" },
   { value: 60, label: "60 ث" },
 ];
+const AI_LEVELS: { value: AiLevel; label: string }[] = [
+  { value: "مبتدئ", label: "مبتدئ" },
+  { value: "متوازن", label: "متوازن" },
+  { value: "خبير", label: "خبير" },
+];
+const AI_STYLES: { value: AiStyle; label: string }[] = [
+  { value: "حذر", label: "حذر" },
+  { value: "متوازن", label: "متوازن" },
+  { value: "مبادر", label: "مبادر" },
+];
+const TABLE_THEMES: { value: TableTheme; label: string }[] = [
+  { value: "emerald", label: "زمردية" },
+  { value: "midnight", label: "ليلية" },
+  { value: "sand", label: "رملية" },
+];
+const CARD_FACE_THEMES: { value: CardFaceTheme; label: string }[] = [
+  { value: "ivory", label: "عاجية" },
+  { value: "parchment", label: "ورقية" },
+  { value: "midnight", label: "داكنة" },
+];
+const SOUND_PROFILES: { value: SoundProfile; label: string }[] = [
+  { value: "هادئة", label: "هادئة" },
+  { value: "متوازنة", label: "متوازنة" },
+  { value: "بارزة", label: "بارزة" },
+];
+const ANIMATION_SPEEDS: { value: AnimationSpeed; label: string }[] = [
+  { value: "هادئة", label: "هادئة" },
+  { value: "متوازنة", label: "متوازنة" },
+  { value: "سريعة", label: "سريعة" },
+];
 
 export default function SettingsScreen() {
   const { settings, updateSettings } = useGame();
@@ -38,11 +68,16 @@ export default function SettingsScreen() {
         <Text style={styles.title}>الإعدادات</Text>
         <Text style={styles.subtitle}>خصص النسخة المحلية من طرنيب بما يناسب جلستك.</Text>
         <Section title="هدف المباراة"><View style={styles.choiceRow}>{([31, 41, 61] as const).map((score) => <Choice key={score} label={`${score} نقطة`} active={settings.targetScore === score} onPress={() => updateSettings({ targetScore: score })} />)}</View></Section>
-        <Section title="أسلوب الخصوم"><View style={styles.choiceRow}>{(["هادئ", "متوازن", "جريء"] as const).map((level) => <Choice key={level} label={level} active={settings.aiLevel === level} onPress={() => updateSettings({ aiLevel: level })} />)}</View></Section>
+        <Section title="مستوى الخصوم"><View style={styles.choiceRow}>{AI_LEVELS.map((level) => <Choice key={level.value} label={level.label} active={settings.aiLevel === level.value} onPress={() => updateSettings({ aiLevel: level.value })} />)}</View><Text style={styles.curveDescription}>المبتدئ يتبع القواعد الأساسية، والمتوازن يدير المخاطرة، والخبير يقرأ الأوراق المكشوفة ويحافظ على أوراقه الرابحة.</Text></Section>
+        <Section title="أسلوب الخصوم"><View style={styles.choiceRow}>{AI_STYLES.map((style) => <Choice key={style.value} label={style.label} active={settings.aiStyle === style.value} onPress={() => updateSettings({ aiStyle: style.value })} />)}</View><Text style={styles.curveDescription}>الحذر يقلّل المزايدات والمخاطرة، والمتوازن مناسب للتعلّم، والمبادر يضغط للمّات عندما تكون يده قوية.</Text></Section>
         <Section title="التغذية الراجعة"><ToggleRow label="الاهتزاز للمسات المهمة" description="عند بدء الجولة ولعب الورق والنتائج." value={settings.hapticsEnabled} onChange={(hapticsEnabled) => updateSettings({ hapticsEnabled })} /><ToggleRow label="المؤثرات الصوتية" description="أصوات خفيفة للتوزيع ولعب الورق وحسم اللمّة." value={settings.soundEnabled} onChange={(soundEnabled) => updateSettings({ soundEnabled })} /></Section>
+        <Section title="صوت اللعبة"><View style={styles.choiceRow}>{SOUND_PROFILES.map((profile) => <Choice key={profile.value} label={profile.label} active={settings.soundProfile === profile.value} onPress={() => updateSettings({ soundProfile: profile.value })} />)}</View><Text style={styles.curveDescription}>يتحكم في شدة أصوات توزيع الأوراق ولعبها وحسم اللمّة، مع بقاء زر المؤثرات الصوتية هو مفتاح التشغيل العام.</Text></Section>
+        <Section title="سرعة الحركات"><View style={styles.choiceRow}>{ANIMATION_SPEEDS.map((speed) => <Choice key={speed.value} label={speed.label} active={settings.animationSpeed === speed.value} onPress={() => updateSettings({ animationSpeed: speed.value })} />)}</View><Text style={styles.curveDescription}>تطبّق على توزيع الأوراق والسحب والرمي وجمع اللمّة. اختر السريعة لوتيرة أسرع أو الهادئة لمشاهدة التحركات بوضوح.</Text></Section>
         <Section title="مؤقّت الدور"><View style={styles.timerChoiceRow}>{TURN_TIMER_OPTIONS.map((option) => <Choice key={option.value} label={option.label} active={settings.turnTimerSeconds === option.value} onPress={() => updateSettings({ turnTimerSeconds: option.value })} />)}</View><Text style={styles.curveDescription}>يظهر في دورك فقط خلال اللعب الفردي وينبّه صوتيًا قبل آخر خمس ثوانٍ. لا يمنعك انتهاء الوقت من إكمال الحركة.</Text></Section>
         <Section title="مظهر الأوراق"><View style={styles.choiceRow}>{CARD_FAN_CURVES.map((curve) => <Choice key={curve.value} label={curve.label} active={settings.cardFanCurve === curve.value} onPress={() => updateSettings({ cardFanCurve: curve.value })} />)}</View><Text style={styles.curveDescription}>اختر ارتفاع القوس وميل الأوراق في يدك. يطبّق التغيير فورًا ويُحفظ على جهازك.</Text></Section>
         <Section title="نقش ظهر البطاقات"><View style={styles.patternRow}>{CARD_BACK_PATTERNS.map((pattern) => <CardBackChoice key={pattern.value} {...pattern} active={settings.cardBackPattern === pattern.value} onPress={() => updateSettings({ cardBackPattern: pattern.value })} />)}</View><Text style={styles.curveDescription}>اختر النقش الذي يظهر على أوراق الخصوم. يُطبّق التغيير فورًا ويُحفظ على جهازك.</Text></Section>
+        <Section title="وجه البطاقات"><View style={styles.choiceRow}>{CARD_FACE_THEMES.map((theme) => <Choice key={theme.value} label={theme.label} active={settings.cardFaceTheme === theme.value} onPress={() => updateSettings({ cardFaceTheme: theme.value })} />)}</View><Text style={styles.curveDescription}>غيّر خلفية وجه أوراقك وتباين أرقامها، مع الحفاظ على وضوح اللونين الأحمر والأسود.</Text></Section>
+        <Section title="سطح الطاولة"><View style={styles.choiceRow}>{TABLE_THEMES.map((theme) => <Choice key={theme.value} label={theme.label} active={settings.tableTheme === theme.value} onPress={() => updateSettings({ tableTheme: theme.value })} />)}</View><Text style={styles.curveDescription}>اختر سطحًا زمرديًا تقليديًا أو ليليًا هادئًا أو رمليًا دافئًا. يظهر التغيير فورًا داخل المباراة.</Text></Section>
         <Section title="قراءة الطاولة"><View style={styles.choiceRow}>{TABLE_TEXT_SIZES.map((size) => <Choice key={size.value} label={size.label} active={settings.tableTextSize === size.value} onPress={() => updateSettings({ tableTextSize: size.value })} />)}</View><Text style={styles.curveDescription}>يكبّر أسماء اللاعبين والنتائج وبيانات الطرنيب داخل الطاولة لتسهيل القراءة. يُطبّق فورًا ويُحفظ على جهازك.</Text></Section>
         <Section title="تكديس أوراق الخصوم"><View style={styles.choiceRow}>{OPPONENT_CARD_DENSITIES.map((density) => <Choice key={density.value} label={density.label} active={settings.opponentCardDensity === density.value} onPress={() => updateSettings({ opponentCardDensity: density.value })} />)}</View><Text style={styles.curveDescription}>يتحكم في تباعد أوراق الخصوم على الطاولة. اختر المتقارب للشاشات الصغيرة أو المتباعد لتمييز الأوراق أكثر.</Text></Section>
         <Section title="للاعبين المتقدمين"><ToggleRow label="مؤشر قوة الأنواع" description="يعرض الاقتراح والدرجات وأيقونة شرح طريقة الاحتساب في المزايدة." value={settings.showStrengthIndicator} onChange={(showStrengthIndicator) => updateSettings({ showStrengthIndicator })} /></Section>

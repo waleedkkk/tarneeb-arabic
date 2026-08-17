@@ -5,7 +5,7 @@ import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSequen
 
 import { PlayingCard } from "./card";
 import { getBalancedFanCardPosition, getCardDragDropThreshold, getFanEdgeHitSlop, getResponsiveFanMetrics, isCardDragDrop } from "@/lib/tarneeb/card-fan-layout";
-import type { Card, CardBackPattern, CardFanCurve } from "@/lib/tarneeb/types";
+import type { AnimationSpeed, Card, CardBackPattern, CardFaceTheme, CardFanCurve } from "@/lib/tarneeb/types";
 
 interface CurvedCardHandProps {
   cards: Card[];
@@ -14,6 +14,8 @@ interface CurvedCardHandProps {
   entranceStep?: number;
   curveStrength?: CardFanCurve;
   cardBackPattern?: CardBackPattern;
+  cardFaceTheme?: CardFaceTheme;
+  animationSpeed?: AnimationSpeed;
   dealFlip?: boolean;
   dragEnabled?: boolean;
   onCardDragStateChange?: (dragging: boolean) => void;
@@ -28,6 +30,8 @@ export function CurvedCardHand({
   entranceStep = 22,
   curveStrength = "balanced",
   cardBackPattern = "royal",
+  cardFaceTheme = "ivory",
+  animationSpeed = "متوازنة",
   dealFlip = true,
   dragEnabled = false,
   onCardDragStateChange,
@@ -51,19 +55,21 @@ export function CurvedCardHand({
           curveStrength,
         );
         const disabled = disabledCardIds.includes(card.id);
-        return <FanCardSlot key={card.id} card={card} compact={metrics.compact} disabled={disabled} dragEnabled={dragEnabled} entranceDelay={index * entranceStep} cardBackPattern={cardBackPattern} dealFlip={dealFlip} edgeFeedback={metrics.compact && (index === 0 || index === cards.length - 1)} hitSlop={getFanEdgeHitSlop(index, cards.length, metrics.compact)} position={position} onDragStateChange={onCardDragStateChange} onPlay={onCardPress ? () => onCardPress(card.id) : undefined} />;
+        return <FanCardSlot key={card.id} card={card} compact={metrics.compact} disabled={disabled} dragEnabled={dragEnabled} entranceDelay={index * entranceStep * (animationSpeed === "هادئة" ? 1.25 : animationSpeed === "سريعة" ? 0.72 : 1)} cardBackPattern={cardBackPattern} cardFaceTheme={cardFaceTheme} animationSpeed={animationSpeed} dealFlip={dealFlip} edgeFeedback={metrics.compact && (index === 0 || index === cards.length - 1)} hitSlop={getFanEdgeHitSlop(index, cards.length, metrics.compact)} position={position} onDragStateChange={onCardDragStateChange} onPlay={onCardPress ? () => onCardPress(card.id) : undefined} />;
       })}
     </View>
   );
 }
 
-function FanCardSlot({ card, compact, disabled, dragEnabled, entranceDelay, cardBackPattern, dealFlip, edgeFeedback, hitSlop, position, onDragStateChange, onPlay }: {
+function FanCardSlot({ card, compact, disabled, dragEnabled, entranceDelay, cardBackPattern, cardFaceTheme, animationSpeed, dealFlip, edgeFeedback, hitSlop, position, onDragStateChange, onPlay }: {
   card: Card;
   compact: boolean;
   disabled: boolean;
   dragEnabled: boolean;
   entranceDelay: number;
   cardBackPattern: CardBackPattern;
+  cardFaceTheme: CardFaceTheme;
+  animationSpeed: AnimationSpeed;
   dealFlip: boolean;
   edgeFeedback: boolean;
   hitSlop: ReturnType<typeof getFanEdgeHitSlop>;
@@ -77,6 +83,7 @@ function FanCardSlot({ card, compact, disabled, dragEnabled, entranceDelay, card
   const dragLift = useSharedValue(0);
   const [departing, setDeparting] = useState(false);
   const dropThreshold = getCardDragDropThreshold(compact);
+  const motion = animationSpeed === "هادئة" ? 1.28 : animationSpeed === "سريعة" ? 0.72 : 1;
 
   const finishDeparture = () => {
     setDeparting(false);
@@ -86,8 +93,8 @@ function FanCardSlot({ card, compact, disabled, dragEnabled, entranceDelay, card
     if (!onPlay || departing) return;
     setDeparting(true);
     departure.value = withSequence(
-      withTiming(0.34, { duration: 95, easing: Easing.out(Easing.cubic) }),
-      withTiming(1, { duration: 190, easing: Easing.in(Easing.cubic) }, (finished) => {
+      withTiming(0.34, { duration: 95 * motion, easing: Easing.out(Easing.cubic) }),
+      withTiming(1, { duration: 190 * motion, easing: Easing.in(Easing.cubic) }, (finished) => {
         if (finished) runOnJS(finishDeparture)();
       }),
     );
@@ -106,7 +113,7 @@ function FanCardSlot({ card, compact, disabled, dragEnabled, entranceDelay, card
     .enabled(Boolean(onPlay) && dragEnabled && !disabled && !departing)
     .activeOffsetY([-8, 8])
     .onBegin(() => {
-      dragLift.value = withTiming(1, { duration: 90, easing: Easing.out(Easing.cubic) });
+      dragLift.value = withTiming(1, { duration: 90 * motion, easing: Easing.out(Easing.cubic) });
       runOnJS(notifyDragState)(true);
     })
     .onUpdate((event) => {
@@ -116,14 +123,14 @@ function FanCardSlot({ card, compact, disabled, dragEnabled, entranceDelay, card
     .onEnd((event) => {
       const reachesTable = isCardDragDrop(event.translationY, compact);
       if (reachesTable) {
-        dragX.value = withTiming(event.translationX * 0.25, { duration: 110, easing: Easing.out(Easing.cubic) });
-        dragY.value = withTiming(-dropThreshold - 28, { duration: 110, easing: Easing.out(Easing.cubic) });
-        dragLift.value = withTiming(0, { duration: 110, easing: Easing.out(Easing.cubic) });
+        dragX.value = withTiming(event.translationX * 0.25, { duration: 110 * motion, easing: Easing.out(Easing.cubic) });
+        dragY.value = withTiming(-dropThreshold - 28, { duration: 110 * motion, easing: Easing.out(Easing.cubic) });
+        dragLift.value = withTiming(0, { duration: 110 * motion, easing: Easing.out(Easing.cubic) });
         runOnJS(playCard)();
       } else {
-        dragX.value = withTiming(0, { duration: 170, easing: Easing.out(Easing.cubic) });
-        dragY.value = withTiming(0, { duration: 170, easing: Easing.out(Easing.cubic) });
-        dragLift.value = withTiming(0, { duration: 130, easing: Easing.out(Easing.cubic) });
+        dragX.value = withTiming(0, { duration: 170 * motion, easing: Easing.out(Easing.cubic) });
+        dragY.value = withTiming(0, { duration: 170 * motion, easing: Easing.out(Easing.cubic) });
+        dragLift.value = withTiming(0, { duration: 130 * motion, easing: Easing.out(Easing.cubic) });
       }
       runOnJS(notifyDragState)(false);
     })
@@ -135,7 +142,7 @@ function FanCardSlot({ card, compact, disabled, dragEnabled, entranceDelay, card
     <Animated.View style={[styles.cardSlot, { left: position.left, bottom: position.bottom, zIndex: position.zIndex }, departureStyle]}>
       <GestureDetector gesture={drag}>
         <View>
-          <PlayingCard card={card} compact={compact} entranceDelay={entranceDelay} cardBackPattern={cardBackPattern} dealFlip={dealFlip} disabled={disabled || departing} hitSlop={hitSlop} edgeFeedback={edgeFeedback} onPress={onPlay ? playCard : undefined} />
+          <PlayingCard card={card} compact={compact} entranceDelay={entranceDelay} cardBackPattern={cardBackPattern} cardFaceTheme={cardFaceTheme} animationSpeed={animationSpeed} dealFlip={dealFlip} disabled={disabled || departing} hitSlop={hitSlop} edgeFeedback={edgeFeedback} onPress={onPlay ? playCard : undefined} />
         </View>
       </GestureDetector>
     </Animated.View>

@@ -91,7 +91,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   );
   const [hydrated, setHydrated] = useState(false);
   const [turnTimer, setTurnTimer] = useState<TurnTimerState>({ durationSeconds: 0, remainingSeconds: 0, isActive: false, isExpired: false });
-  const sounds = useGameSounds(settings.soundEnabled);
+  const sounds = useGameSounds(settings.soundEnabled, settings.soundProfile);
   const previousTrick = useRef<string | null>(null);
   const recordedRoundKey = useRef<string | null>(null);
   const readyToRecordStats = useRef(false);
@@ -215,23 +215,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const timeout = setTimeout(() => {
       if (isAiBidTurn) {
         const playerId = state.bidding.currentPlayer as 1 | 2 | 3;
-        const bid = chooseAiBid(state.players[playerId].hand, state.bidding.highestBid, settings.aiLevel);
+        const bid = chooseAiBid(state.players[playerId].hand, state.bidding.highestBid, settings.aiLevel, settings.aiStyle);
         dispatch({ type: "BID", playerId, bid });
       }
       if (isAiTrumpTurn) {
         const playerId = state.bidding.highestBidder as 1 | 2 | 3;
-        dispatch({ type: "TRUMP", playerId, suit: chooseAiTrump(state.players[playerId].hand) });
+        dispatch({ type: "TRUMP", playerId, suit: chooseAiTrump(state.players[playerId].hand, settings.aiLevel, settings.aiStyle) });
       }
       if (isAiPlayTurn) {
         const lastPlayer = state.trick.plays.length > 0 ? state.trick.plays.at(-1)!.playerId : state.trick.leaderId;
         const playerId = ((lastPlayer + (state.trick.plays.length > 0 ? 1 : 0)) % 4) as 1 | 2 | 3;
-        const card = chooseAiCard(state, playerId);
+        const card = chooseAiCard(state, playerId, settings.aiLevel, settings.aiStyle);
         sounds.playCard();
         dispatch({ type: "PLAY", playerId, cardId: card.id });
       }
-    }, isAiPlayTurn ? 650 : 800);
+    }, (isAiPlayTurn ? (settings.aiLevel === "خبير" ? 760 : settings.aiLevel === "مبتدئ" ? 520 : 650) : (settings.aiLevel === "خبير" ? 920 : settings.aiLevel === "مبتدئ" ? 620 : 800)) * (settings.animationSpeed === "هادئة" ? 1.24 : settings.animationSpeed === "سريعة" ? 0.74 : 1));
     return () => clearTimeout(timeout);
-  }, [settings.aiLevel, sounds, state]);
+  }, [settings.aiLevel, settings.aiStyle, settings.animationSpeed, sounds, state]);
 
   const value = useMemo<GameContextValue>(
     () => ({

@@ -83,5 +83,7 @@ describe("محرك طرنيب", () => {
     expect(DEFAULT_SETTINGS.tableTextSize).toBe("normal");
     expect(DEFAULT_SETTINGS.opponentCardDensity).toBe("balanced");
     expect(DEFAULT_SETTINGS.turnTimerSeconds).toBe(0);
+    expect(DEFAULT_SETTINGS.aiLevel).toBe("متوازن");
+    expect(DEFAULT_SETTINGS.aiStyle).toBe("متوازن");
   });
 });
