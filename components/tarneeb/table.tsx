@@ -10,7 +10,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { Easing, FadeIn, FadeOut, LinearTransition, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from "react-native-reanimated";
 
-export function GameTable({ state, onCardPress, action, fanCurve, cardBackPattern, cardFaceTheme, tableTheme, animationSpeed, tableTextSize, opponentCardDensity, turnTimer }: { state: MatchState; onCardPress: (cardId: string) => void; action?: ReactNode; fanCurve: CardFanCurve; cardBackPattern: CardBackPattern; cardFaceTheme: CardFaceTheme; tableTheme: TableTheme; animationSpeed: AnimationSpeed; tableTextSize: TableTextSize; opponentCardDensity: OpponentCardDensity; turnTimer: { durationSeconds: TurnTimerSeconds; remainingSeconds: number; isActive: boolean; isExpired: boolean } }) {
+export function GameTable({ state, onCardPress, action, fanCurve, cardBackPattern, cardFaceTheme, tableTheme, animationSpeed, tableTextSize, opponentCardDensity, showOpponentProfileCards, turnTimer }: { state: MatchState; onCardPress: (cardId: string) => void; action?: ReactNode; fanCurve: CardFanCurve; cardBackPattern: CardBackPattern; cardFaceTheme: CardFaceTheme; tableTheme: TableTheme; animationSpeed: AnimationSpeed; tableTextSize: TableTextSize; opponentCardDensity: OpponentCardDensity; showOpponentProfileCards: boolean; turnTimer: { durationSeconds: TurnTimerSeconds; remainingSeconds: number; isActive: boolean; isExpired: boolean } }) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const nativeLayout = getNativeTableLayout({ width, height, insets });
@@ -24,6 +24,10 @@ export function GameTable({ state, onCardPress, action, fanCurve, cardBackPatter
   const [selectedPersona, setSelectedPersona] = useState<ReturnType<typeof getAiPersona> | null>(null);
   const largeText = tableTextSize === "large";
   const theme = TABLE_THEMES[tableTheme];
+
+  useEffect(() => {
+    if (!showOpponentProfileCards) setSelectedPersona(null);
+  }, [showOpponentProfileCards]);
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.screen, paddingHorizontal: nativeLayout.horizontalPadding, paddingTop: nativeLayout.topSafeFallback }]}> 
@@ -46,9 +50,9 @@ export function GameTable({ state, onCardPress, action, fanCurve, cardBackPatter
       </View>
 
       <View style={[styles.table, { backgroundColor: theme.table, borderColor: theme.border, minHeight: nativeLayout.tableMinHeight, maxHeight: nativeLayout.tableMaxHeight, marginTop: nativeLayout.tableTopMargin }]}>
-        <PlayerSeat name={state.players[2].name} persona={state.players[2].personaId ? getAiPersona(state.players[2].personaId) : undefined} cards={state.players[2].handCount} position="top" active={currentSeat(state) === 2} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} onPersonaPress={setSelectedPersona} />
-        <PlayerSeat name={state.players[3].name} persona={state.players[3].personaId ? getAiPersona(state.players[3].personaId) : undefined} cards={state.players[3].handCount} position="left" active={currentSeat(state) === 3} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} onPersonaPress={setSelectedPersona} />
-        <PlayerSeat name={state.players[1].name} persona={state.players[1].personaId ? getAiPersona(state.players[1].personaId) : undefined} cards={state.players[1].handCount} position="right" active={currentSeat(state) === 1} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} onPersonaPress={setSelectedPersona} />
+        <PlayerSeat name={state.players[2].name} persona={state.players[2].personaId ? getAiPersona(state.players[2].personaId) : undefined} cards={state.players[2].handCount} position="top" active={currentSeat(state) === 2} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} showProfileCard={showOpponentProfileCards} onPersonaPress={setSelectedPersona} />
+        <PlayerSeat name={state.players[3].name} persona={state.players[3].personaId ? getAiPersona(state.players[3].personaId) : undefined} cards={state.players[3].handCount} position="left" active={currentSeat(state) === 3} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} showProfileCard={showOpponentProfileCards} onPersonaPress={setSelectedPersona} />
+        <PlayerSeat name={state.players[1].name} persona={state.players[1].personaId ? getAiPersona(state.players[1].personaId) : undefined} cards={state.players[1].handCount} position="right" active={currentSeat(state) === 1} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} showProfileCard={showOpponentProfileCards} onPersonaPress={setSelectedPersona} />
 
         <View style={styles.trickArea}>
           {humanTurn && (
@@ -68,7 +72,7 @@ export function GameTable({ state, onCardPress, action, fanCurve, cardBackPatter
         <View style={styles.handHeader}><Text style={[styles.handTitle, largeText && styles.handTitleLarge]}>أوراقك</Text><View style={styles.handMeta}>{turnTimer.durationSeconds > 0 && (turnTimer.isActive || turnTimer.isExpired) && <TurnTimerBadge timer={turnTimer} />}<Text style={[styles.handHint, largeText && styles.handHintLarge]}>{humanTurn ? "اسحب ورقة للطاولة أو اضغط عليها" : "دور الخصم"}</Text></View></View>
         <CurvedCardHand cards={hand} accessibilityLabel="يدك مرتبة ضمن قوس متساوٍ" dragEnabled={humanTurn} entranceStep={26} curveStrength={fanCurve} cardBackPattern={cardBackPattern} cardFaceTheme={cardFaceTheme} animationSpeed={animationSpeed} dealFlip={false} disabledCardIds={!humanTurn ? hand.map((card) => card.id) : hand.filter((card) => !playable.includes(card.id)).map((card) => card.id)} onCardDragStateChange={setDraggingCard} onCardPress={onCardPress} />
       </View>
-      <PersonaInfoCard persona={selectedPersona} onClose={() => setSelectedPersona(null)} />
+      <PersonaInfoCard persona={showOpponentProfileCards ? selectedPersona : null} onClose={() => setSelectedPersona(null)} />
     </View>
   );
 }
@@ -147,7 +151,7 @@ function currentSeat(state: MatchState) {
   return state.trick.plays.length === 0 ? state.trick.leaderId : ((state.trick.plays.at(-1)!.playerId + 1) % 4);
 }
 
-function PlayerSeat({ name, persona, cards, position, active, cardBackPattern, density, largeText, onPersonaPress }: { name: string; persona?: ReturnType<typeof getAiPersona>; cards: number; position: "top" | "left" | "right"; active: boolean; cardBackPattern: CardBackPattern; density: OpponentCardDensity; largeText: boolean; onPersonaPress: (persona: ReturnType<typeof getAiPersona>) => void }) {
+function PlayerSeat({ name, persona, cards, position, active, cardBackPattern, density, largeText, showProfileCard, onPersonaPress }: { name: string; persona?: ReturnType<typeof getAiPersona>; cards: number; position: "top" | "left" | "right"; active: boolean; cardBackPattern: CardBackPattern; density: OpponentCardDensity; largeText: boolean; showProfileCard: boolean; onPersonaPress: (persona: ReturnType<typeof getAiPersona>) => void }) {
   const isSideSeat = position !== "top";
   const cardRotation = position === "left" ? "90deg" : "-90deg";
   const fan = getOpponentCardFanLayout(cards, position, density);
@@ -171,7 +175,7 @@ function PlayerSeat({ name, persona, cards, position, active, cardBackPattern, d
 
   return (
       <View style={[styles.playerSeat, styles[position], active && styles.activeSeat]}>
-        <Pressable accessibilityRole={persona ? "button" : undefined} accessibilityLabel={persona ? `عرض بطاقة ${persona.name}` : name} disabled={!persona} onPress={() => persona && onPersonaPress(persona)} style={({ pressed }) => [styles.avatar, pressed && styles.avatarPressed]}>{persona ? <Image source={{ uri: persona.avatarUri }} style={styles.avatarImage} accessibilityLabel={`الصورة الرمزية للاعب ${persona.name}`} /> : <Text style={styles.avatarText}>{name.slice(0, 1)}</Text>}</Pressable>
+        <Pressable accessibilityRole={persona && showProfileCard ? "button" : undefined} accessibilityLabel={persona && showProfileCard ? `عرض بطاقة ${persona.name}` : `الصورة الرمزية للاعب ${name}`} disabled={!persona || !showProfileCard} onPress={() => persona && showProfileCard && onPersonaPress(persona)} style={({ pressed }) => [styles.avatar, pressed && styles.avatarPressed]}>{persona ? <Image source={{ uri: persona.avatarUri }} style={styles.avatarImage} accessibilityLabel={`الصورة الرمزية للاعب ${persona.name}`} /> : <Text style={styles.avatarText}>{name.slice(0, 1)}</Text>}</Pressable>
         <View style={styles.seatDetails}>
           <View style={styles.nameRow}>
               <View style={styles.playerIdentity}><Text style={[styles.playerName, largeText && styles.playerNameLarge]}>{name}</Text>{persona && <Text numberOfLines={1} style={styles.personaLabel}>{persona.title}</Text>}</View>

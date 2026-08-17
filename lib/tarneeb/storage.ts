@@ -66,10 +66,11 @@ export async function loadStoredSettings(): Promise<Partial<GameSettings> | null
     const cardFaceTheme = parsed.cardFaceTheme === "ivory" || parsed.cardFaceTheme === "parchment" || parsed.cardFaceTheme === "midnight" ? parsed.cardFaceTheme : "ivory";
     const soundProfile = parsed.soundProfile === "هادئة" || parsed.soundProfile === "متوازنة" || parsed.soundProfile === "بارزة" ? parsed.soundProfile : "متوازنة";
     const animationSpeed = parsed.animationSpeed === "هادئة" || parsed.animationSpeed === "متوازنة" || parsed.animationSpeed === "سريعة" ? parsed.animationSpeed : "متوازنة";
+    const showOpponentProfileCards = typeof parsed.showOpponentProfileCards === "boolean" ? parsed.showOpponentProfileCards : true;
     const storedPersonas = parsed.opponentPersonas;
     const personaFor = (seat: 1 | 2 | 3) => storedPersonas?.[seat] && storedPersonas[seat] in AI_PERSONAS ? storedPersonas[seat] : DEFAULT_OPPONENT_PERSONAS[seat];
     const opponentPersonas = { 1: personaFor(1), 2: personaFor(2), 3: personaFor(3) };
-    return { ...parsed, aiLevel, aiStyle, tableTheme, cardFaceTheme, soundProfile, animationSpeed, opponentPersonas };
+    return { ...parsed, aiLevel, aiStyle, tableTheme, cardFaceTheme, soundProfile, animationSpeed, showOpponentProfileCards, opponentPersonas };
   } catch {
     return null;
   }

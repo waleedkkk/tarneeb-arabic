@@ -26,7 +26,7 @@ export default function GameScreen() {
 
   return (
     <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
-      <GameTable action={<View style={styles.tableActionRow}><MatchLogButton compact /><MatchActions /></View>} fanCurve={game.settings.cardFanCurve} cardBackPattern={game.settings.cardBackPattern} cardFaceTheme={game.settings.cardFaceTheme} tableTheme={game.settings.tableTheme} animationSpeed={game.settings.animationSpeed} tableTextSize={game.settings.tableTextSize} opponentCardDensity={game.settings.opponentCardDensity} turnTimer={game.turnTimer} state={state} onCardPress={(cardId) => {
+      <GameTable action={<View style={styles.tableActionRow}><MatchLogButton compact /><MatchActions /></View>} fanCurve={game.settings.cardFanCurve} cardBackPattern={game.settings.cardBackPattern} cardFaceTheme={game.settings.cardFaceTheme} tableTheme={game.settings.tableTheme} animationSpeed={game.settings.animationSpeed} tableTextSize={game.settings.tableTextSize} opponentCardDensity={game.settings.opponentCardDensity} showOpponentProfileCards={game.settings.showOpponentProfileCards} turnTimer={game.turnTimer} state={state} onCardPress={(cardId) => {
         const card = state.players[0].hand.find((item) => item.id === cardId);
         if (card && legalCards(state.players[0].hand, state.trick).some((item) => item.id === card.id)) {
           if (isNetworkMatch) room.requestCard(card.id);

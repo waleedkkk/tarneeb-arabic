@@ -122,6 +122,7 @@ export interface GameSettings {
   hapticsEnabled: boolean;
   soundEnabled: boolean;
   showStrengthIndicator: boolean;
+  showOpponentProfileCards: boolean;
   cardFanCurve: CardFanCurve;
   cardBackPattern: CardBackPattern;
   tableTextSize: TableTextSize;

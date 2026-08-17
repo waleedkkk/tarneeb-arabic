@@ -31,6 +31,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   hapticsEnabled: true,
   soundEnabled: true,
   showStrengthIndicator: true,
+  showOpponentProfileCards: true,
   cardFanCurve: "balanced",
   cardBackPattern: "royal",
   tableTextSize: "normal",
