@@ -32,12 +32,29 @@ export interface DiscoveredLocalRoom {
   port: number;
 }
 
-function getTcp(): TcpModule | null {
+let cachedTcp: TcpModule | null | undefined = undefined;
+
+/** يعيد تعيين الكاش الداخلي — يُستخدم في الاختبارات بعد vi.resetModules. */
+export function __resetTransportCache() {
+  cachedTcp = undefined;
+  cachedZeroconf = undefined;
+}
+
+let lastCheckedPlatform: string | null = null;
+
+async function getTcp(): Promise<TcpModule | null> {
   if (Platform.OS === "web") return null;
-  // تُحمّل الوحدة الأصلية فقط على الهاتف حتى تبقى معاينة الويب قابلة للتشغيل.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const module = require("react-native-tcp-socket") as { default?: TcpModule } & TcpModule;
-  return module.default ?? module;
+  // تُحسب الوحدة الأصلية مرة واحدة لكل منصة؛ يُعاد الحساب عند تغيّرها (مفيد في الاختبارات).
+  if (cachedTcp !== undefined && lastCheckedPlatform === Platform.OS) return cachedTcp;
+  lastCheckedPlatform = Platform.OS;
+  try {
+    const module = (await import("react-native-tcp-socket")) as { default?: TcpModule } & TcpModule;
+    const tcp = module.default ?? module;
+    cachedTcp = tcp && typeof tcp.createConnection === "function" ? tcp : null;
+  } catch {
+    cachedTcp = null;
+  }
+  return cachedTcp;
 }
 
 function parseChunk(
@@ -74,7 +91,7 @@ export class LocalRoomHost {
   constructor(private readonly handlers: LocalHostHandlers) {}
 
   async start(port = LOCAL_ROOM_PORT): Promise<void> {
-    const tcp = getTcp();
+    const tcp = await getTcp();
     if (!tcp) throw new Error("تتطلب استضافة غرفة محلية نسخة أصلية من التطبيق على هاتفك.");
     if (this.server) return;
 
@@ -132,34 +149,53 @@ export class LocalRoomClient {
   constructor(private readonly handlers: LocalClientHandlers) {}
 
   async connect(host: string, port: number): Promise<void> {
-    const tcp = getTcp();
+    const tcp = await getTcp();
     if (!tcp) throw new Error("تتطلب الغرفة المحلية نسخة أصلية من التطبيق على هاتفك.");
     if (this.socket) this.disconnect();
 
     await new Promise<void>((resolve, reject) => {
+      let settled = false;
       let connected = false;
-      const socket = tcp.createConnection({ host, port, connectTimeout: LOCAL_ROOM_JOIN_TIMEOUT_MS + 1000 }, () => {
-        connected = true;
-        this.socket = socket;
-        socket.setEncoding("utf8");
-        socket.setNoDelay(true);
-        socket.setKeepAlive(true);
-        this.handlers.onConnect();
-        resolve();
-      });
-      this.socket = socket;
-      socket.on("data", (chunk: string | Uint8Array) => {
-        this.buffer = parseChunk(chunk, this.buffer, this.handlers.onMessage);
-      });
-      socket.on("error", (error: Error) => {
-        this.handlers.onError(error.message);
-        if (!connected) reject(error);
-      });
-      socket.on("close", () => {
-        this.socket = null;
-        this.handlers.onClose();
-        if (!connected) reject(new Error("تعذر الوصول إلى مضيف الغرفة."));
-      });
+      const finishOnce = (handler: () => void) => {
+        if (settled) return;
+        settled = true;
+        handler();
+      };
+      try {
+        // يُستخدم let مع متغير مرجعي لتجنّب TDZ إن نُفّذ callback المتصل اتصالًا بشكل متزامن قبل اكتمال التعيين.
+        let socketRef: Socket;
+        socketRef = tcp.createConnection({ host, port, connectTimeout: LOCAL_ROOM_JOIN_TIMEOUT_MS + 1000 }, () => {
+          connected = true;
+          if (socketRef) this.socket = socketRef;
+          if (socketRef) {
+            socketRef.setEncoding("utf8");
+            socketRef.setNoDelay(true);
+            socketRef.setKeepAlive(true);
+          }
+          this.handlers.onConnect();
+          resolve();
+        });
+        this.socket = socketRef;
+        socketRef.on("data", (chunk: string | Uint8Array) => {
+          this.buffer = parseChunk(chunk, this.buffer, this.handlers.onMessage);
+        });
+        socketRef.on("error", (error: Error) => {
+          finishOnce(() => {
+            this.handlers.onError(error.message);
+            reject(error);
+          });
+        });
+        socketRef.on("close", () => {
+          this.socket = null;
+          this.handlers.onClose();
+          finishOnce(() => reject(new Error("تعذر الوصول إلى مضيف الغرفة.")));
+        });
+      } catch (error) {
+        finishOnce(() => {
+          this.handlers.onError(error instanceof Error ? error.message : "خطأ في بدء الاتصال المحلي.");
+          reject(error instanceof Error ? error : new Error(String(error)));
+        });
+      }
     });
   }
 
@@ -175,17 +211,38 @@ export class LocalRoomClient {
   }
 }
 
-function getZeroconf(): (new () => {
-  on: (event: string, listener: (service: Record<string, unknown>) => void) => void;
-  publishService: (type: string, protocol: string, domain: string, name: string, port: number, txt: Record<string, string>, implType?: string) => void;
-  unpublishService: (name: string, implType?: string) => void;
-  scan: (type: string, protocol: string, domain: string, implType?: string) => void;
-  stop: (implType?: string) => void;
-  removeDeviceListeners: () => void;
-}) | null {
+let cachedZeroconf: ReturnType<typeof loadZeroconf> | undefined = undefined;
+
+function loadZeroconf() {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const module = require("react-native-zeroconf") as { default?: unknown };
+    const Ctor = (module.default ?? module) as new () => {
+      on: (event: string, listener: (service: Record<string, unknown>) => void) => void;
+      publishService: (type: string, protocol: string, domain: string, name: string, port: number, txt: Record<string, string>, implType?: string) => void;
+      unpublishService: (name: string, implType?: string) => void;
+      scan: (type: string, protocol: string, domain: string, implType?: string) => void;
+      stop: (implType?: string) => void;
+      removeDeviceListeners: () => void;
+    };
+    return Ctor?.prototype && Ctor.prototype.scan ? Ctor : null;
+  } catch {
+    return null;
+  }
+}
+
+function getZeroconf(): ReturnType<typeof loadZeroconf> | null {
   if (Platform.OS === "web") return null;
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require("react-native-zeroconf").default;
+  if (cachedZeroconf === undefined) cachedZeroconf = loadZeroconf();
+  return cachedZeroconf;
+}
+
+/** يكشف ما إذا كانت وحدات النقل الأصلية متوفرة في النسخة المبنية. */
+export async function getLocalRoomTransport(): Promise<{ tcp: TcpModule | null; zeroconf: ReturnType<typeof loadZeroconf> } | null> {
+  if (Platform.OS === "web") return null;
+  const tcp = await getTcp();
+  const zeroconf = getZeroconf();
+  return { tcp, zeroconf };
 }
 
 export function publishLocalRoom(name: string, roomId: string, port: number): () => void {

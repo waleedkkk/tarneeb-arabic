@@ -149,9 +149,9 @@ export function LocalRoomSheet({ visible, onClose }: { visible: boolean; onClose
           <Pressable accessibilityLabel="إغلاق الغرفة المحلية" style={({ pressed }) => [styles.close, pressed && styles.pressed]} onPress={() => void closeOrLeave()}><Text style={styles.closeText}>×</Text></Pressable>
         </View>
 
-        {!room.isNativeSupported ? <NativeBuildNotice /> : null}
+        {!room.nativeSupported ? <NativeBuildNotice /> : null}
         {mode !== "join" && room.error ? <ErrorCard message={room.error} /> : null}
-        {mode === "menu" && <Menu onCreate={() => setMode("create")} onJoin={() => setMode("join")} disabled={!room.isNativeSupported} />}
+        {mode === "menu" && <Menu onCreate={() => setMode("create")} onJoin={() => setMode("join")} disabled={!room.nativeSupported} />}
         {mode === "create" && <CreateForm name={name} onNameChange={setName} onBack={() => setMode("menu")} onCreate={() => void create()} busy={room.status === "hosting"} />}
         {mode === "host" && <HostLobby onStart={room.startRoomMatch} onLeave={() => void closeOrLeave()} />}
         {mode === "join" && <JoinForm name={name} roomCode={roomCode} onNameChange={setName} onRoomCodeChange={(value) => { setRoomCode(value); setFlowError(null); }} onBack={() => { setFlowError(null); setMode("menu"); }} onScan={() => void scan()} onJoin={() => void join()} onCancel={() => void room.leaveRoom()} busy={room.status === "joining"} millisecondsRemaining={joinMillisecondsRemaining} requestingCamera={requestingCamera} permissionGranted={Boolean(permission?.granted)} error={visibleJoinError} errorActionLabel={retryErrorLabel} onErrorAction={retryErrorAction} />}

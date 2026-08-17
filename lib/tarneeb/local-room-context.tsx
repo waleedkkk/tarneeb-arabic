@@ -8,6 +8,7 @@ import { LOCAL_ROOM_JOIN_TIMEOUT_MS, roomDetailsToQrData, stateForViewer, type R
 import {
   LOCAL_ROOM_PORT,
   discoverLocalRooms,
+  getLocalRoomTransport,
   LocalRoomClient,
   LocalRoomHost,
   publishLocalRoom,
@@ -37,7 +38,7 @@ interface LocalRoomContextValue {
   roomQrData: string | null;
   error: string | null;
   discoveredRooms: DiscoveredLocalRoom[];
-  isNativeSupported: boolean;
+  nativeSupported: boolean;
   createRoom: (name: string) => Promise<void>;
   joinRoom: (details: RoomConnectionDetails, name: string) => Promise<void>;
   startRoomMatch: () => void;
@@ -83,7 +84,17 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
     joinTimeoutRef.current = null;
   }, []);
 
-  const isNativeSupported = Platform.OS !== "web";
+  const [nativeSupported, setNativeSupported] = useState<boolean>(false);
+  useEffect(() => {
+    let mounted = true;
+    void (async () => {
+      const transport = await getLocalRoomTransport();
+      if (mounted) setNativeSupported(transport !== null && transport.tcp !== null);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
   const setMemberList = useCallback((next: RoomMember[]) => {
     const normalized = [...next].sort((a, b) => a.seat - b.seat);
     membersRef.current = normalized;
@@ -118,7 +129,7 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
   const createRoom = useCallback(async (name: string) => {
     const hostName = name.trim() || "صاحب الغرفة";
     closingRoomRef.current = false;
-    if (!isNativeSupported) {
+    if (!nativeSupported) {
       setError("استضافة الغرفة تحتاج نسخة أصلية على هاتف Android أو iPhone، وليست معاينة الويب.");
       setStatus("error");
       return;
@@ -180,13 +191,13 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
       setRoomDetails(null);
       roomRef.current = null;
     }
-  }, [broadcastLobby, dispatchHostIntent, game.state.phase, isNativeSupported, setMemberList, updateHostMembersForDisconnect]);
+  }, [broadcastLobby, dispatchHostIntent, game.state.phase, nativeSupported, setMemberList, updateHostMembersForDisconnect]);
 
   const joinRoom = useCallback(async (details: RoomConnectionDetails, name: string) => {
     const playerName = name.trim() || "لاعب";
     closingRoomRef.current = false;
     clearJoinTimeout();
-    if (!isNativeSupported) {
+    if (!nativeSupported) {
       setError("الانضمام إلى غرفة يحتاج نسخة أصلية على هاتف Android أو iPhone.");
       setStatus("error");
       return;
@@ -263,7 +274,7 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
       clientRef.current?.disconnect();
       clientRef.current = null;
     }
-  }, [clearJoinTimeout, game, isNativeSupported, setMemberList]);
+  }, [clearJoinTimeout, game, nativeSupported, setMemberList]);
 
   const broadcastGameState = useCallback(() => {
     if (role !== "host" || !hostRef.current || game.state.phase === "home") return;
@@ -313,13 +324,13 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
   }, [clearJoinTimeout]);
 
   const discoverRooms = useCallback(() => {
-    if (!isNativeSupported) return;
+    if (!nativeSupported) return;
     stopDiscoveringRef.current?.();
     setDiscoveredRooms([]);
     stopDiscoveringRef.current = discoverLocalRooms((room) => {
       setDiscoveredRooms((current) => current.some((item) => item.roomId === room.roomId && item.host === room.host) ? current : [...current, room]);
     });
-  }, [isNativeSupported]);
+  }, [nativeSupported]);
 
   const stopDiscovering = useCallback(() => {
     stopDiscoveringRef.current?.();
@@ -374,7 +385,7 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
     roomQrData: roomDetails ? roomDetailsToQrData(roomDetails) : null,
     error,
     discoveredRooms,
-    isNativeSupported,
+    nativeSupported,
     createRoom,
     joinRoom,
     startRoomMatch,
@@ -386,7 +397,7 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
     requestCard,
     requestNextTrick,
     requestNextRound,
-  }), [createRoom, discoverRooms, discoveredRooms, error, isNativeSupported, joinRoom, leaveRoom, localSeat, members, requestBid, requestCard, requestNextRound, requestNextTrick, requestTrump, role, roomDetails, startRoomMatch, status, stopDiscovering]);
+  }), [createRoom, discoverRooms, discoveredRooms, error, nativeSupported, joinRoom, leaveRoom, localSeat, members, requestBid, requestCard, requestNextRound, requestNextTrick, requestTrump, role, roomDetails, startRoomMatch, status, stopDiscovering]);
 
   return <LocalRoomContext.Provider value={value}>{children}</LocalRoomContext.Provider>;
 }
