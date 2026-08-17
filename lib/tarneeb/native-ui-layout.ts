@@ -9,11 +9,14 @@ export type NativeViewport = {
   width: number;
   height: number;
   insets: NativeInsets;
+  /** True when height already represents the content inside a SafeAreaView. */
+  safeFrame?: boolean;
 };
 
 export const ANDROID_TEST_VIEWPORTS = {
   compact: { width: 360, height: 800, insets: { top: 24, bottom: 24, left: 0, right: 0 } },
   standard: { width: 412, height: 915, insets: { top: 28, bottom: 24, left: 0, right: 0 } },
+  redmi14cGameFrame: { width: 360, height: 710, insets: { top: 0, bottom: 0, left: 0, right: 0 }, safeFrame: true },
 } as const satisfies Record<string, NativeViewport>;
 
 /**
@@ -27,21 +30,24 @@ export const NATIVE_LAYOUT_DIRECTION = {
   rightSeat: "right" as const,
 };
 
-export function getNativeTableLayout({ width, height, insets }: NativeViewport) {
+export function getNativeTableLayout({ width, height, insets, safeFrame = false }: NativeViewport) {
   const compact = width <= 375;
-  const contentHeight = Math.max(0, height - insets.top - insets.bottom);
+  const contentHeight = Math.max(0, safeFrame ? height : height - insets.top - insets.bottom);
   // بعض حاويات المعاينة لا تمرّر inset أعلى رغم وجود شريط حالة أو فتحة شاشة.
   // نحجز مساحة مرئية بديلة فقط عندما لا يتوفر inset أصلي.
-  const topSafeFallback = insets.top === 0 ? (compact ? 44 : 48) : 0;
+  const topSafeFallback = safeFrame ? 0 : insets.top === 0 ? (compact ? 44 : 48) : 0;
   const playableContentHeight = Math.max(0, contentHeight - topSafeFallback);
+  const compactHeight = playableContentHeight <= 700;
+  const denseLayout = compact || compactHeight;
   const horizontalPadding = compact ? 12 : 14;
-  const statusHeight = compact ? 46 : 50;
-  const handAreaHeight = compact ? 132 : 140;
-  const tableTopMargin = 10;
-  const handTopMargin = 10;
-  const tableMinHeight = 330;
+  const statusHeight = denseLayout ? 46 : 50;
+  const handAreaHeight = denseLayout ? 124 : 140;
+  const tableTopMargin = denseLayout ? 8 : 10;
+  const handTopMargin = denseLayout ? 6 : 10;
+  const preferredTableMinHeight = denseLayout ? 286 : 330;
   const reservedHeight = statusHeight + tableTopMargin + handTopMargin + handAreaHeight;
-  const tableMaxHeight = Math.max(tableMinHeight, playableContentHeight - reservedHeight);
+  const tableMaxHeight = Math.max(0, playableContentHeight - reservedHeight);
+  const tableMinHeight = Math.min(preferredTableMinHeight, tableMaxHeight);
 
   return {
     contentHeight,
@@ -55,6 +61,7 @@ export function getNativeTableLayout({ width, height, insets }: NativeViewport) 
     tableMinHeight,
     tableMaxHeight,
     reservedHeight,
+    compact: denseLayout,
     direction: NATIVE_LAYOUT_DIRECTION,
   };
 }

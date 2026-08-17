@@ -11,9 +11,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { Easing, FadeIn, FadeOut, LinearTransition, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from "react-native-reanimated";
 
 export function GameTable({ state, onCardPress, action, fanCurve, cardBackPattern, cardFaceTheme, tableTheme, animationSpeed, tableTextSize, opponentCardDensity, showOpponentProfileCards, turnTimer }: { state: MatchState; onCardPress: (cardId: string) => void; action?: ReactNode; fanCurve: CardFanCurve; cardBackPattern: CardBackPattern; cardFaceTheme: CardFaceTheme; tableTheme: TableTheme; animationSpeed: AnimationSpeed; tableTextSize: TableTextSize; opponentCardDensity: OpponentCardDensity; showOpponentProfileCards: boolean; turnTimer: { durationSeconds: TurnTimerSeconds; remainingSeconds: number; isActive: boolean; isExpired: boolean } }) {
-  const { width, height } = useWindowDimensions();
+  const { width, height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const nativeLayout = getNativeTableLayout({ width, height, insets });
+  const [contentHeight, setContentHeight] = useState(0);
+  const nativeLayout = getNativeTableLayout({ width, height: contentHeight || windowHeight, insets, safeFrame: contentHeight > 0 });
   const humanTurn = state.phase === "playing" && (state.trick.plays.length === 0 ? state.trick.leaderId === 0 : (state.trick.plays.at(-1)?.playerId ?? 3) === 3);
   const playable = humanTurn ? legalCards(state.players[0].hand, state.trick).map((card) => card.id) : [];
   const cardBySeat = Object.fromEntries(state.trick.plays.map((play) => [play.playerId, play.card]));
@@ -30,7 +31,10 @@ export function GameTable({ state, onCardPress, action, fanCurve, cardBackPatter
   }, [showOpponentProfileCards]);
 
   return (
-    <View style={[styles.screen, { backgroundColor: theme.screen, paddingHorizontal: nativeLayout.horizontalPadding, paddingTop: nativeLayout.topSafeFallback }]}> 
+    <View onLayout={(event) => {
+      const measuredHeight = Math.round(event.nativeEvent.layout.height);
+      if (measuredHeight > 0 && measuredHeight !== contentHeight) setContentHeight(measuredHeight);
+    }} style={[styles.screen, { backgroundColor: theme.screen, paddingHorizontal: nativeLayout.horizontalPadding, paddingTop: nativeLayout.topSafeFallback }]}> 
       <View style={[styles.statusRow, { minHeight: nativeLayout.statusHeight }]}>
         <View style={styles.scorePill}>
           <View style={styles.teamHeading}><Text style={[styles.scoreLabel, largeText && styles.scoreLabelLarge]}>فريقك</Text><View style={styles.trickBadge}><Text style={[styles.trickBadgeValue, largeText && styles.trickBadgeValueLarge]}>{state.tricksWon[0]}</Text><Text style={[styles.trickBadgeLabel, largeText && styles.trickBadgeLabelLarge]}>لمم</Text></View></View>
@@ -70,7 +74,7 @@ export function GameTable({ state, onCardPress, action, fanCurve, cardBackPatter
 
       <View style={[styles.handArea, { height: nativeLayout.handAreaHeight, marginTop: nativeLayout.handTopMargin }]}> 
         <View style={styles.handHeader}><Text style={[styles.handTitle, largeText && styles.handTitleLarge]}>أوراقك</Text><View style={styles.handMeta}>{turnTimer.durationSeconds > 0 && (turnTimer.isActive || turnTimer.isExpired) && <TurnTimerBadge timer={turnTimer} />}<Text style={[styles.handHint, largeText && styles.handHintLarge]}>{humanTurn ? "اسحب ورقة للطاولة أو اضغط عليها" : "دور الخصم"}</Text></View></View>
-        <CurvedCardHand cards={hand} accessibilityLabel="يدك مرتبة ضمن قوس متساوٍ" dragEnabled={humanTurn} entranceStep={26} curveStrength={fanCurve} cardBackPattern={cardBackPattern} cardFaceTheme={cardFaceTheme} animationSpeed={animationSpeed} dealFlip={false} disabledCardIds={!humanTurn ? hand.map((card) => card.id) : hand.filter((card) => !playable.includes(card.id)).map((card) => card.id)} onCardDragStateChange={setDraggingCard} onCardPress={onCardPress} />
+        <CurvedCardHand cards={hand} accessibilityLabel="يدك مرتبة ضمن قوس متساوٍ" compactLayout={nativeLayout.compact} dragEnabled={humanTurn} entranceStep={26} curveStrength={fanCurve} cardBackPattern={cardBackPattern} cardFaceTheme={cardFaceTheme} animationSpeed={animationSpeed} dealFlip={false} disabledCardIds={!humanTurn ? hand.map((card) => card.id) : hand.filter((card) => !playable.includes(card.id)).map((card) => card.id)} onCardDragStateChange={setDraggingCard} onCardPress={onCardPress} />
       </View>
       <PersonaInfoCard persona={showOpponentProfileCards ? selectedPersona : null} onClose={() => setSelectedPersona(null)} />
     </View>

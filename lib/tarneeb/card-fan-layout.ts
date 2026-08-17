@@ -23,8 +23,8 @@ export interface ResponsiveFanMetrics {
  * 48px visual width plus their touch margin, while regular cards are used when
  * there is room for the full 60px card treatment.
  */
-export function getResponsiveFanMetrics(viewportWidth: number): ResponsiveFanMetrics {
-  const compact = viewportWidth < 344;
+export function getResponsiveFanMetrics(viewportWidth: number, compactLayout = false): ResponsiveFanMetrics {
+  const compact = compactLayout || viewportWidth < 344;
   const cardFootprint = compact ? COMPACT_CARD_FOOTPRINT : STANDARD_CARD_FOOTPRINT;
   const horizontalInset = compact ? 24 : 44;
   const availableWidth = Math.max(viewportWidth - horizontalInset, cardFootprint);

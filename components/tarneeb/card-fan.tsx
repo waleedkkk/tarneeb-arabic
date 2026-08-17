@@ -17,6 +17,7 @@ interface CurvedCardHandProps {
   cardFaceTheme?: CardFaceTheme;
   animationSpeed?: AnimationSpeed;
   dealFlip?: boolean;
+  compactLayout?: boolean;
   dragEnabled?: boolean;
   onCardDragStateChange?: (dragging: boolean) => void;
   onCardPress?: (cardId: string) => void;
@@ -33,12 +34,13 @@ export function CurvedCardHand({
   cardFaceTheme = "ivory",
   animationSpeed = "متوازنة",
   dealFlip = true,
+  compactLayout = false,
   dragEnabled = false,
   onCardDragStateChange,
   onCardPress,
 }: CurvedCardHandProps) {
   const { width } = useWindowDimensions();
-  const metrics = getResponsiveFanMetrics(width);
+  const metrics = getResponsiveFanMetrics(width, compactLayout);
 
   return (
     <View

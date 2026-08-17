@@ -21,6 +21,17 @@ describe("native Android table layout", () => {
     expect(layout.tableMaxHeight + layout.reservedHeight).toBeLessThanOrEqual(layout.playableContentHeight);
   });
 
+  it("uses the measured tab-screen frame on Redmi 14C instead of subtracting system insets twice", () => {
+    const viewport = ANDROID_TEST_VIEWPORTS.redmi14cGameFrame;
+    const layout = getNativeTableLayout(viewport);
+
+    expect(layout.contentHeight).toBe(viewport.height);
+    expect(layout.topSafeFallback).toBe(0);
+    expect(layout.compact).toBe(true);
+    expect(layout.tableMaxHeight + layout.reservedHeight).toBeLessThanOrEqual(viewport.height);
+    expect(layout.handAreaHeight).toBe(124);
+  });
+
   it("uses controlled LTR geometry with explicit RTL rows, preventing native double mirroring", () => {
     const layout = getNativeTableLayout(ANDROID_TEST_VIEWPORTS.standard);
 
