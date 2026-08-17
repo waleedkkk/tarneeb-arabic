@@ -1,6 +1,6 @@
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useGame } from "@/lib/tarneeb/game-context";
 import { useLocalRoom } from "@/lib/tarneeb/local-room-context";
 import { cardLabel, legalCards, suitName, suitStrength, suitSymbol } from "@/lib/tarneeb/engine";
@@ -25,7 +25,7 @@ export default function GameScreen() {
   if (state.phase === "roundResult") return <RoundResult />;
 
   return (
-    <SafeAreaView edges={["top", "left", "right"]} style={styles.safe}>
+    <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
       <GameTable action={<View style={styles.tableActionRow}><MatchLogButton compact /><MatchActions /></View>} fanCurve={game.settings.cardFanCurve} cardBackPattern={game.settings.cardBackPattern} cardFaceTheme={game.settings.cardFaceTheme} tableTheme={game.settings.tableTheme} animationSpeed={game.settings.animationSpeed} tableTextSize={game.settings.tableTextSize} opponentCardDensity={game.settings.opponentCardDensity} showOpponentProfileCards={game.settings.showOpponentProfileCards} turnTimer={game.turnTimer} state={state} onCardPress={(cardId) => {
         const card = state.players[0].hand.find((item) => item.id === cardId);
         if (card && legalCards(state.players[0].hand, state.trick).some((item) => item.id === card.id)) {
@@ -81,7 +81,7 @@ function Home({ onStart, onLocal }: { onStart: () => void; onLocal: () => void }
 }
 
 function ConnectionLostScreen({ message, onReturn }: { message: string; onReturn: () => void }) {
-  return <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}><View style={styles.centerPage}><Text style={styles.connectionKicker}>الغرفة المحلية</Text><Text style={styles.pageTitle}>انقطع الاتصال</Text><Text style={styles.connectionMessage}>{message}</Text><PrimaryButton label="العودة للرئيسية" onPress={onReturn} /></View></SafeAreaView>;
+  return <SafeAreaView edges={["top", "left", "right"]} style={styles.safe}><View style={styles.centerPage}><Text style={styles.connectionKicker}>الغرفة المحلية</Text><Text style={styles.pageTitle}>انقطع الاتصال</Text><Text style={styles.connectionMessage}>{message}</Text><PrimaryButton label="العودة للرئيسية" onPress={onReturn} /></View></SafeAreaView>;
 }
 
 function MatchActions() {
@@ -137,9 +137,10 @@ function Bidding() {
   const isHumanTurn = state.bidding.currentPlayer === 0;
   const strengths = SUITS.map((suit) => suitStrength(state.players[0].hand, suit));
   const strongest = [...strengths].sort((a, b) => b.score - a.score)[0];
+  const insets = useSafeAreaInsets();
   return (
-    <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <SafeAreaView edges={["top", "left", "right"]} style={styles.safe}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 34 }]}>
         <RoundHeader round={state.round} label="المزايدة" action={<View style={styles.headerActionRow}><MatchLogButton compact /><MatchActions /></View>} />
         <View style={styles.panel}>
           <Text style={styles.panelEyebrow}>العرض الأعلى</Text>
@@ -170,9 +171,10 @@ function TrumpSelection() {
   const { state } = game;
   const humanIsBidder = state.bidding.highestBidder === 0;
   const strengths = SUITS.map((suit) => suitStrength(state.players[0].hand, suit));
+  const insets = useSafeAreaInsets();
   return (
-    <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.trumpContent}>
+    <SafeAreaView edges={["top", "left", "right"]} style={styles.safe}>
+      <ScrollView contentContainerStyle={[styles.trumpContent, { paddingBottom: insets.bottom + 24 }]}>
         <View style={styles.trumpTopBar}><View style={styles.headerActionRow}><MatchLogButton compact /><MatchActions /></View></View>
         <Text style={styles.kicker}>الطلب {state.bidding.highestBid}</Text>
         <Text style={styles.pageTitle}>{humanIsBidder ? "اختر الطرنيب" : "يختار الخصم الطرنيب"}</Text>
@@ -193,6 +195,7 @@ function RoundResult() {
   const [exitConfirmationVisible, setExitConfirmationVisible] = useState(false);
   const isRoomMatch = state.matchMode === "localRoom";
   const canRestart = !isRoomMatch || room.role === "host";
+  const insets = useSafeAreaInsets();
   const restart = () => {
     if (isRoomMatch) room.startRoomMatch();
     else game.startMatch();
@@ -206,8 +209,8 @@ function RoundResult() {
     game.exitMatch();
   };
   return (
-    <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
-      <View style={styles.centerPage}>
+    <SafeAreaView edges={["top", "left", "right"]} style={styles.safe}>
+      <View style={[styles.centerPage, { paddingBottom: insets.bottom + 24 }]}>
         <Text style={styles.kicker}>نهاية الجولة {state.round}</Text>
         <Text style={styles.pageTitle}>{matchWinner ? `فاز ${matchWinner} بالمباراة` : summary.madeContract ? "تم تحقيق الطلب" : "لم يتحقق الطلب"}</Text>
         <Text style={styles.pageSubtitle}>كان الطلب {summary.bid}، وحصل فريقك على {summary.roundTricks[0]} لمم مقابل {summary.roundTricks[1]} للخصم.</Text>

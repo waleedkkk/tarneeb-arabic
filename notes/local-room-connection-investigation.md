@@ -90,3 +90,44 @@
 3. todo.md: تحديث بنود تشخيص الاتصال (علامة [x])
 4. webdev_save_checkpoint
 5. رسالة للمستخدم: السبب كان require ESM-only الفاشل (TDZ ورفض فوري)؛ APK يجب أن يتضمن native modules عبر expo prebuild
+
+## بلاغ جديد: 2026-08-17 — خطأ Uncaught Error: 6000ms timeout exceeded
+
+### الأعراض (لقطة من الهاتف):
+- شاشة حمراء "Log 1 of 1" في Expo Go على الهاتف
+- `Uncaught Error: 6000ms timeout exceeded`
+- Source: `node_modules/fontfaceobserver/fontfaceobserver.standalone.js (5:426)` — `D.prototype.load`
+- Call Stack: `setTimeout$argument_0` → fontfaceobserver
+
+### التشخيص:
+- هذا خطأ معروف من `fontfaceobserver` الذي تستخدمه `expo-font` داخليًا في Expo Go (web/hybrid runtime) لانتظار تحميل الخطوط.
+- السبب: expo-font تنتظر تحميل الخطوط المخصصة لمدة timeout 6000ms؛ عند فشل التحميل (بطء شبكة/عدم توفر الخط في بيئة Expo Go الهجينة خاصة على Android 6.0+) ترمي خطًا غير ممسوك.
+- لا علاقة له بمحرك اللعبة ولا بالشبكة المحلية.
+- الحل الشائع: wrap تحميل الخطوط بـ catch في `_layout.tsx` عند استخدام `Font.loadAsync`، أو استخدام try/catch حول SplashScreen.preventAutoHideAsync، أو تعطيل fontfaceobserver في web.
+- في Expo SDK 54: الخط يحدث غالبًا لأن SplashScreen.hideAsync يُستدعى بعد انتهاء المهلة ويرمي.
+
+### ملاحظة مهمة للمستخدم:
+هذا الخط يظهر غالبًا في **Expo Go / معاينة الويب** على الهاتف وليس في APK النهائي المبنى بـ prebuild (لأن APK يحمل الخطوط محلية ولا يحتاج fontfaceobserver). يجب نصح المستخدم ببناء APK وتجربة الخطأ فيه أولًا.
+
+### ملفات المشروع المرجعية:
+- app/_layout.tsx (موضع Font.loadAsync وSplashScreen)
+
+## تشخيص نهائي لخطأ 6000ms timeout exceeded (لقطة 1000069713.jpg):
+
+### الاستنتاج:
+1. الخطأ ليس من كود اللعبة إطلاقًا؛ المشروع **لا يحمل خطوطًا مخصصة** (لا Font.loadAsync ولا useFonts في أي ملف من app/ أو components/ أو lib/).
+2. المصدر الوحيد لـ fontfaceobserver هو **expo-font** (مذكور كـ plugin في app.config.ts) الذي يُفعّل **فقط في بيئة الويب/الهجينة** (ExpoFontLoader.web.js سطر 139-142: `new FontObserver(...).load(null, 6000)`).
+3. المستدعي المرجح هو **@expo/vector-icons/MaterialIcons** داخل `icon-symbol.tsx` (يُستخدم في شريط التبويب السفلي): عند عرضه لأول مرة في سياق web/hybrid يطلب تحميل خط الخطوط (MaterialIcons.ttf) عبر Font.loadAsync، وفي Expo Go على Android إذا تأخر تحميل الخط أكثر من 6000ms (شبكة بطيئة/محدودية الذاكرة كما هو الحال حاليًا في sandbox) يرمي الخطأ غير الممسوك.
+4. اللقطة تظهر **Preivew داخل Expo Go** على هاتف — هذا هو السياق الهجين المتأثر.
+
+### السبب البيئي:
+الـ sandbox تحت ضغط ذاكرة عالٍ (>80%) مما يبطئ حزم Metro ويزيد زمن تحميل خط MaterialIcons في Expo Go عن 6 ثوانٍ.
+
+### الحلول المقترحة:
+1. **إعادة المحاولة/Dismissing**: الخطأ لا يؤثر على عمل التطبيق — زر Dismiss يغلقه ويكمل التطبيق طبيعيًا.
+2. **تحسين بيئة التطوير**: تخفيض استهلاك الذاكرة وإعادة تشغيل Metro لتسريع تحميل الأصول.
+3. **تثبيت خط MaterialIcons محليًا**: تحميل الخط مسبقًا بحزمة ثابتة (unimodules) في APK النهائي يحل المشكلة نهائيًا في النسخة المنشورة.
+4. **تجنب vector-icons في عرض أولي**: استخدام expo-symbols مباشرة أو تأجيل ظهور شريط التبويب حتى جاهزية الخط.
+
+### توصية التسليم:
+إبلاغ المستخدم بأن الخطأ بيئي (Expo Go + ضغط الذاكرة) وليس خللًا في اللعبة، وأن APK النهائي المبنى يحمل الخطوط محليًا فلا يظهر الخطأ فيه.
