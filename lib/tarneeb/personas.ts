@@ -5,6 +5,7 @@ export interface AiPersona {
   name: string;
   title: string;
   description: string;
+  avatarUri: string;
   tendency: AiPersonaTendency;
   bidBias: number;
   trumpLengthBias: number;
@@ -20,23 +21,23 @@ export interface AiPersona {
  */
 export const AI_PERSONAS: Record<AiPersonaId, AiPersona> = {
   layaan: {
-    id: "layaan", name: "ليان", title: "الحارسة", description: "تحافظ على أوراقها الرابحة ولا ترفع الطلب إلا مع يد موثوقة.", tendency: "تحفّظ",
+    id: "layaan", name: "ليان", title: "الحارسة", description: "تحافظ على أوراقها الرابحة ولا ترفع الطلب إلا مع يد موثوقة.", avatarUri: "/manus-storage/tarneeb-avatar-layaan_2d828e65.png", tendency: "تحفّظ",
     bidBias: -0.45, trumpLengthBias: 0.1, trumpHonorBias: 0.85, leadRankBias: -0.12, preserveTrump: true, preferWinningPressure: false,
   },
   faris: {
-    id: "faris", name: "فارس", title: "الشريك الوفي", description: "يلعب بهدوء ويدعم اللمّات التي بدأها فريقه قبل المخاطرة.", tendency: "دعم",
+    id: "faris", name: "فارس", title: "الشريك الوفي", description: "يلعب بهدوء ويدعم اللمّات التي بدأها فريقه قبل المخاطرة.", avatarUri: "/manus-storage/tarneeb-avatar-faris_0ee782a6.png", tendency: "دعم",
     bidBias: 0, trumpLengthBias: 0.5, trumpHonorBias: 0.4, leadRankBias: -0.03, preserveTrump: true, preferWinningPressure: false,
   },
   samar: {
-    id: "samar", name: "سامر", title: "المبادر", description: "يضغط بالأنواع القوية ويسعى إلى حسم اللمّة عند توفر فرصة آمنة.", tendency: "ضغط",
+    id: "samar", name: "سامر", title: "المبادر", description: "يضغط بالأنواع القوية ويسعى إلى حسم اللمّة عند توفر فرصة آمنة.", avatarUri: "/manus-storage/tarneeb-avatar-samar_5ad5c662.png", tendency: "ضغط",
     bidBias: 0.6, trumpLengthBias: 0.8, trumpHonorBias: 0.25, leadRankBias: 0.18, preserveTrump: false, preferWinningPressure: true,
   },
   rania: {
-    id: "rania", name: "رانيا", title: "المستدرِجة", description: "تفتح بأنواع متوازنة لاستكشاف الخصوم وتترك الأوراق العالية للحظة الأنسب.", tendency: "استدراج",
+    id: "rania", name: "رانيا", title: "المستدرِجة", description: "تفتح بأنواع متوازنة لاستكشاف الخصوم وتترك الأوراق العالية للحظة الأنسب.", avatarUri: "/manus-storage/tarneeb-avatar-rania_df5a7f92.png", tendency: "استدراج",
     bidBias: 0.2, trumpLengthBias: 0.25, trumpHonorBias: 0.65, leadRankBias: -0.05, preserveTrump: true, preferWinningPressure: false,
   },
   nader: {
-    id: "nader", name: "نادر", title: "قارئ الطاولة", description: "يركّز على الأنواع التي كشفها الخصوم ويختار أقل ورقة رابحة ممكنة بدقة.", tendency: "تحكّم",
+    id: "nader", name: "نادر", title: "قارئ الطاولة", description: "يركّز على الأنواع التي كشفها الخصوم ويختار أقل ورقة رابحة ممكنة بدقة.", avatarUri: "/manus-storage/tarneeb-avatar-nader_d6a0167c.png", tendency: "تحكّم",
     bidBias: 0.1, trumpLengthBias: 0.35, trumpHonorBias: 0.7, leadRankBias: 0.06, preserveTrump: true, preferWinningPressure: false,
   },
 };

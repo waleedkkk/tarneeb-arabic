@@ -1,4 +1,4 @@
-import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { Image, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { CardBack, PlayingCard } from "./card";
 import { CurvedCardHand } from "./card-fan";
 import { cardLabel, legalCards, suitName, suitSymbol } from "@/lib/tarneeb/engine";
@@ -45,9 +45,9 @@ export function GameTable({ state, onCardPress, action, fanCurve, cardBackPatter
       </View>
 
       <View style={[styles.table, { backgroundColor: theme.table, borderColor: theme.border, minHeight: nativeLayout.tableMinHeight, maxHeight: nativeLayout.tableMaxHeight, marginTop: nativeLayout.tableTopMargin }]}>
-        <PlayerSeat name={state.players[2].name} personaTitle={state.players[2].personaId ? getAiPersona(state.players[2].personaId).title : undefined} cards={state.players[2].handCount} position="top" active={currentSeat(state) === 2} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} />
-        <PlayerSeat name={state.players[3].name} personaTitle={state.players[3].personaId ? getAiPersona(state.players[3].personaId).title : undefined} cards={state.players[3].handCount} position="left" active={currentSeat(state) === 3} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} />
-        <PlayerSeat name={state.players[1].name} personaTitle={state.players[1].personaId ? getAiPersona(state.players[1].personaId).title : undefined} cards={state.players[1].handCount} position="right" active={currentSeat(state) === 1} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} />
+        <PlayerSeat name={state.players[2].name} persona={state.players[2].personaId ? getAiPersona(state.players[2].personaId) : undefined} cards={state.players[2].handCount} position="top" active={currentSeat(state) === 2} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} />
+        <PlayerSeat name={state.players[3].name} persona={state.players[3].personaId ? getAiPersona(state.players[3].personaId) : undefined} cards={state.players[3].handCount} position="left" active={currentSeat(state) === 3} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} />
+        <PlayerSeat name={state.players[1].name} persona={state.players[1].personaId ? getAiPersona(state.players[1].personaId) : undefined} cards={state.players[1].handCount} position="right" active={currentSeat(state) === 1} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} />
 
         <View style={styles.trickArea}>
           {humanTurn && (
@@ -145,7 +145,7 @@ function currentSeat(state: MatchState) {
   return state.trick.plays.length === 0 ? state.trick.leaderId : ((state.trick.plays.at(-1)!.playerId + 1) % 4);
 }
 
-function PlayerSeat({ name, personaTitle, cards, position, active, cardBackPattern, density, largeText }: { name: string; personaTitle?: string; cards: number; position: "top" | "left" | "right"; active: boolean; cardBackPattern: CardBackPattern; density: OpponentCardDensity; largeText: boolean }) {
+function PlayerSeat({ name, persona, cards, position, active, cardBackPattern, density, largeText }: { name: string; persona?: ReturnType<typeof getAiPersona>; cards: number; position: "top" | "left" | "right"; active: boolean; cardBackPattern: CardBackPattern; density: OpponentCardDensity; largeText: boolean }) {
   const isSideSeat = position !== "top";
   const cardRotation = position === "left" ? "90deg" : "-90deg";
   const fan = getOpponentCardFanLayout(cards, position, density);
@@ -169,10 +169,10 @@ function PlayerSeat({ name, personaTitle, cards, position, active, cardBackPatte
 
   return (
       <View style={[styles.playerSeat, styles[position], active && styles.activeSeat]}>
-        <View style={styles.avatar}><Text style={styles.avatarText}>{name.slice(0, 1)}</Text></View>
+        <View style={styles.avatar}>{persona ? <Image source={{ uri: persona.avatarUri }} style={styles.avatarImage} accessibilityLabel={`الصورة الرمزية للاعب ${persona.name}`} /> : <Text style={styles.avatarText}>{name.slice(0, 1)}</Text>}</View>
         <View style={styles.seatDetails}>
           <View style={styles.nameRow}>
-            <View style={styles.playerIdentity}><Text style={[styles.playerName, largeText && styles.playerNameLarge]}>{name}</Text>{personaTitle && <Text numberOfLines={1} style={styles.personaLabel}>{personaTitle}</Text>}</View>
+              <View style={styles.playerIdentity}><Text style={[styles.playerName, largeText && styles.playerNameLarge]}>{name}</Text>{persona && <Text numberOfLines={1} style={styles.personaLabel}>{persona.title}</Text>}</View>
             {active && <View style={styles.turnMarker}><Text style={styles.turnArrow}>{position === "top" ? "↓" : position === "left" ? "→" : "←"}</Text><Text style={styles.turnText}>دوره</Text></View>}
           </View>
         <Animated.View style={[styles.cardBacks, isSideSeat ? styles.sideCardBacks : styles.topCardBacks, position === "top" && partnerHandLossStyle]}>
@@ -242,7 +242,8 @@ const styles = StyleSheet.create({
   left: { left: 8, top: "50%", transform: [{ translateY: -103 }] },
   right: { right: 8, top: "50%", flexDirection: "row-reverse", transform: [{ translateY: -103 }] },
   activeSeat: { backgroundColor: "rgba(251,191,36,0.2)", borderColor: "#FBBF24", shadowColor: "#FBBF24", shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 0 }, elevation: 5 },
-  avatar: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#E3B341", alignItems: "center", justifyContent: "center" },
+  avatar: { width: 26, height: 26, borderRadius: 13, overflow: "hidden", backgroundColor: "#E3B341", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#FFF8E7" },
+  avatarImage: { width: "100%", height: "100%" },
   avatarText: { color: "#17211D", fontWeight: "900", fontSize: 13 },
   seatDetails: { alignItems: "center" },
   nameRow: { flexDirection: "row-reverse", alignItems: "center", gap: 4 },
