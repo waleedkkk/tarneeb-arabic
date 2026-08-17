@@ -2,17 +2,17 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import { chooseAiBid, chooseAiCard, chooseAiTrump } from "./ai";
 import { advanceTrick, createHomeState, createNetworkRound, createRound, DEFAULT_SETTINGS, playCard, selectTrump, submitBid } from "./engine";
 import { haptic } from "@/lib/haptics";
-import type { Card, GameSettings, MatchState, RoundRecord, Seat, Suit, TurnTimerSeconds } from "./types";
+import type { Card, GameSettings, MatchState, OpponentPersonaAssignments, RoundRecord, Seat, Suit, TurnTimerSeconds } from "./types";
 import { appendRoundRecord, loadStoredMatch, loadStoredSettings, saveStoredMatch, saveStoredSettings } from "./storage";
 import { useGameSounds } from "./use-game-sounds";
 
 type Action =
-  | { type: "START_MATCH" }
+  | { type: "START_MATCH"; personas: OpponentPersonaAssignments }
   | { type: "BID"; playerId: Seat; bid: number | null }
   | { type: "TRUMP"; playerId: Seat; suit: Suit }
   | { type: "PLAY"; playerId: Seat; cardId: string }
   | { type: "NEXT_TRICK" }
-  | { type: "NEXT_ROUND" }
+  | { type: "NEXT_ROUND"; personas: OpponentPersonaAssignments }
   | { type: "START_NETWORK_MATCH"; playerNames: Record<Seat, string> }
   | { type: "NEXT_NETWORK_ROUND" }
   | { type: "NETWORK_STATE"; state: MatchState }
@@ -29,7 +29,7 @@ interface TurnTimerState {
 function reducer(state: MatchState, action: Action): MatchState {
   switch (action.type) {
     case "START_MATCH":
-      return createRound(createHomeState(), true);
+      return createRound(createHomeState(), true, action.personas);
     case "BID":
       return submitBid(state, action.playerId, action.bid);
     case "TRUMP":
@@ -39,7 +39,7 @@ function reducer(state: MatchState, action: Action): MatchState {
     case "NEXT_TRICK":
       return advanceTrick(state);
     case "NEXT_ROUND":
-      return createRound(state);
+      return createRound(state, false, action.personas);
     case "START_NETWORK_MATCH":
       return createNetworkRound(createHomeState(), action.playerNames, true);
     case "NEXT_NETWORK_ROUND": {
@@ -215,17 +215,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const timeout = setTimeout(() => {
       if (isAiBidTurn) {
         const playerId = state.bidding.currentPlayer as 1 | 2 | 3;
-        const bid = chooseAiBid(state.players[playerId].hand, state.bidding.highestBid, settings.aiLevel, settings.aiStyle);
+        const bid = chooseAiBid(state.players[playerId].hand, state.bidding.highestBid, settings.aiLevel, settings.aiStyle, state.players[playerId].personaId);
         dispatch({ type: "BID", playerId, bid });
       }
       if (isAiTrumpTurn) {
         const playerId = state.bidding.highestBidder as 1 | 2 | 3;
-        dispatch({ type: "TRUMP", playerId, suit: chooseAiTrump(state.players[playerId].hand, settings.aiLevel, settings.aiStyle) });
+        dispatch({ type: "TRUMP", playerId, suit: chooseAiTrump(state.players[playerId].hand, settings.aiLevel, settings.aiStyle, state.players[playerId].personaId) });
       }
       if (isAiPlayTurn) {
         const lastPlayer = state.trick.plays.length > 0 ? state.trick.plays.at(-1)!.playerId : state.trick.leaderId;
         const playerId = ((lastPlayer + (state.trick.plays.length > 0 ? 1 : 0)) % 4) as 1 | 2 | 3;
-        const card = chooseAiCard(state, playerId, settings.aiLevel, settings.aiStyle);
+        const card = chooseAiCard(state, playerId, settings.aiLevel, settings.aiStyle, state.players[playerId].personaId);
         sounds.playCard();
         dispatch({ type: "PLAY", playerId, cardId: card.id });
       }
@@ -240,7 +240,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       startMatch: () => {
         feedback();
         sounds.playShuffle();
-        dispatch({ type: "START_MATCH" });
+        dispatch({ type: "START_MATCH", personas: settings.opponentPersonas });
       },
       submitHumanBid: (bid) => {
         feedback();
@@ -262,7 +262,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       nextRound: () => {
         feedback("success");
         sounds.playShuffle();
-        dispatch({ type: "NEXT_ROUND" });
+        dispatch({ type: "NEXT_ROUND", personas: settings.opponentPersonas });
       },
       exitMatch: () => dispatch({ type: "EXIT" }),
       updateSettings: (patch) => {

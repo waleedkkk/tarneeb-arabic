@@ -51,4 +51,17 @@ describe("ذكاء خصوم طرنيب", () => {
 
     expect(chooseAiCard(state, 1, "خبير", "متوازن")).toEqual(card("diamonds", 13));
   });
+
+  it("يميّز بين شخصية حارسة ومبادر عند امتلاك ورقتين رابحتين في اللمّة", () => {
+    const round = createRound(createHomeState(), true);
+    const state = withAiHand({
+      ...round,
+      phase: "playing",
+      bidding: { ...round.bidding, trumpSuit: "hearts" },
+      trick: { leaderId: 0, leadSuit: "clubs", plays: [{ playerId: 0, card: card("clubs", 7) }] },
+    }, 1, [card("clubs", 8), card("clubs", 12)]);
+
+    expect(chooseAiCard(state, 1, "متوازن", "متوازن", "layaan")).toEqual(card("clubs", 8));
+    expect(chooseAiCard(state, 1, "متوازن", "متوازن", "samar")).toEqual(card("clubs", 12));
+  });
 });

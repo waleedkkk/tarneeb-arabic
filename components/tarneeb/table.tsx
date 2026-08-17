@@ -2,6 +2,7 @@ import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { CardBack, PlayingCard } from "./card";
 import { CurvedCardHand } from "./card-fan";
 import { cardLabel, legalCards, suitName, suitSymbol } from "@/lib/tarneeb/engine";
+import { getAiPersona } from "@/lib/tarneeb/personas";
 import { getNativeTableLayout } from "@/lib/tarneeb/native-ui-layout";
 import { getOpponentCardFanLayout } from "@/lib/tarneeb/opponent-card-fan-layout";
 import type { AnimationSpeed, CardBackPattern, CardFaceTheme, CardFanCurve, MatchState, OpponentCardDensity, TableTextSize, TableTheme, TurnTimerSeconds } from "@/lib/tarneeb/types";
@@ -44,9 +45,9 @@ export function GameTable({ state, onCardPress, action, fanCurve, cardBackPatter
       </View>
 
       <View style={[styles.table, { backgroundColor: theme.table, borderColor: theme.border, minHeight: nativeLayout.tableMinHeight, maxHeight: nativeLayout.tableMaxHeight, marginTop: nativeLayout.tableTopMargin }]}>
-        <PlayerSeat name={state.players[2].name} cards={state.players[2].handCount} position="top" active={currentSeat(state) === 2} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} />
-        <PlayerSeat name={state.players[3].name} cards={state.players[3].handCount} position="left" active={currentSeat(state) === 3} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} />
-        <PlayerSeat name={state.players[1].name} cards={state.players[1].handCount} position="right" active={currentSeat(state) === 1} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} />
+        <PlayerSeat name={state.players[2].name} personaTitle={state.players[2].personaId ? getAiPersona(state.players[2].personaId).title : undefined} cards={state.players[2].handCount} position="top" active={currentSeat(state) === 2} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} />
+        <PlayerSeat name={state.players[3].name} personaTitle={state.players[3].personaId ? getAiPersona(state.players[3].personaId).title : undefined} cards={state.players[3].handCount} position="left" active={currentSeat(state) === 3} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} />
+        <PlayerSeat name={state.players[1].name} personaTitle={state.players[1].personaId ? getAiPersona(state.players[1].personaId).title : undefined} cards={state.players[1].handCount} position="right" active={currentSeat(state) === 1} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} />
 
         <View style={styles.trickArea}>
           {humanTurn && (
@@ -144,7 +145,7 @@ function currentSeat(state: MatchState) {
   return state.trick.plays.length === 0 ? state.trick.leaderId : ((state.trick.plays.at(-1)!.playerId + 1) % 4);
 }
 
-function PlayerSeat({ name, cards, position, active, cardBackPattern, density, largeText }: { name: string; cards: number; position: "top" | "left" | "right"; active: boolean; cardBackPattern: CardBackPattern; density: OpponentCardDensity; largeText: boolean }) {
+function PlayerSeat({ name, personaTitle, cards, position, active, cardBackPattern, density, largeText }: { name: string; personaTitle?: string; cards: number; position: "top" | "left" | "right"; active: boolean; cardBackPattern: CardBackPattern; density: OpponentCardDensity; largeText: boolean }) {
   const isSideSeat = position !== "top";
   const cardRotation = position === "left" ? "90deg" : "-90deg";
   const fan = getOpponentCardFanLayout(cards, position, density);
@@ -171,7 +172,7 @@ function PlayerSeat({ name, cards, position, active, cardBackPattern, density, l
         <View style={styles.avatar}><Text style={styles.avatarText}>{name.slice(0, 1)}</Text></View>
         <View style={styles.seatDetails}>
           <View style={styles.nameRow}>
-            <Text style={[styles.playerName, largeText && styles.playerNameLarge]}>{name}</Text>
+            <View style={styles.playerIdentity}><Text style={[styles.playerName, largeText && styles.playerNameLarge]}>{name}</Text>{personaTitle && <Text numberOfLines={1} style={styles.personaLabel}>{personaTitle}</Text>}</View>
             {active && <View style={styles.turnMarker}><Text style={styles.turnArrow}>{position === "top" ? "↓" : position === "left" ? "→" : "←"}</Text><Text style={styles.turnText}>دوره</Text></View>}
           </View>
         <Animated.View style={[styles.cardBacks, isSideSeat ? styles.sideCardBacks : styles.topCardBacks, position === "top" && partnerHandLossStyle]}>
@@ -245,7 +246,9 @@ const styles = StyleSheet.create({
   avatarText: { color: "#17211D", fontWeight: "900", fontSize: 13 },
   seatDetails: { alignItems: "center" },
   nameRow: { flexDirection: "row-reverse", alignItems: "center", gap: 4 },
+  playerIdentity: { alignItems: "flex-end", maxWidth: 76 },
   playerName: { color: "#FFF8E7", fontWeight: "700", fontSize: 12, writingDirection: "rtl" }, playerNameLarge: { fontSize: 14 },
+  personaLabel: { color: "#F5D889", fontSize: 8, lineHeight: 10, fontWeight: "700", textAlign: "right", writingDirection: "rtl", marginTop: 1 },
   turnMarker: { flexDirection: "row-reverse", alignItems: "center", gap: 2, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 8, backgroundColor: "#FBBF24" },
   turnArrow: { color: "#17211D", fontSize: 13, lineHeight: 14, fontWeight: "900" },
   turnText: { color: "#17211D", fontSize: 9, fontWeight: "900", writingDirection: "rtl" },

@@ -15,6 +15,10 @@ export type TurnTimerSeconds = 0 | 30 | 45 | 60;
 export type AiLevel = "مبتدئ" | "متوازن" | "خبير";
 /** نزعة مستقلة تغيّر المخاطرة بعد اختيار مستوى المهارة. */
 export type AiStyle = "حذر" | "متوازن" | "مبادر";
+/** ميول شخصية تغيّر القرار فوق مستوى المهارة ونمط اللعب العام. */
+export type AiPersonaId = "layaan" | "faris" | "samar" | "rania" | "nader";
+export type AiPersonaTendency = "تحفّظ" | "دعم" | "ضغط" | "استدراج" | "تحكّم";
+export type OpponentPersonaAssignments = Record<1 | 2 | 3, AiPersonaId>;
 export type TableTheme = "emerald" | "midnight" | "sand";
 export type CardFaceTheme = "ivory" | "parchment" | "midnight";
 export type SoundProfile = "هادئة" | "متوازنة" | "بارزة";
@@ -35,6 +39,8 @@ export interface Player {
   /** عدد الأوراق الفعلي؛ يبقى ظاهرًا للخصوم حتى عندما لا تُرسل أوراقهم الخاصة عبر الشبكة. */
   handCount: number;
   isHuman: boolean;
+  /** ملف سلوكي محفوظ للخصم الآلي؛ لا يُستخدم في الغرفة المحلية. */
+  personaId?: AiPersonaId;
 }
 
 export interface Play {
@@ -108,6 +114,7 @@ export interface GameSettings {
   targetScore: 31 | 41 | 61;
   aiLevel: AiLevel;
   aiStyle: AiStyle;
+  opponentPersonas: OpponentPersonaAssignments;
   tableTheme: TableTheme;
   cardFaceTheme: CardFaceTheme;
   soundProfile: SoundProfile;

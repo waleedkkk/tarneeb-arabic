@@ -46,8 +46,8 @@ describe("محرك طرنيب", () => {
     const afterTrick = cards.reduce<import("../lib/tarneeb/types").MatchState>((current, item, playerId) => playCard(current, playerId as 0 | 1 | 2 | 3, item.id), playingState);
 
     expect(afterTrick.matchLog.tricks).toHaveLength(1);
-    expect(afterTrick.matchLog.tricks[0]).toMatchObject({ trickNumber: 1, winnerId: 2, winnerName: "شريكك" });
-    expect(afterTrick.matchLog.tricks[0].plays.map((play) => play.playerName)).toEqual(["أنت", "ليان", "شريكك", "سامر"]);
+    expect(afterTrick.matchLog.tricks[0]).toMatchObject({ trickNumber: 1, winnerId: 2, winnerName: "فارس" });
+    expect(afterTrick.matchLog.tricks[0].plays.map((play) => play.playerName)).toEqual(["أنت", "ليان", "فارس", "سامر"]);
   });
 
   it("يعيد بدء المباراة بجولة مزايدة جديدة مع تصفير النقاط واللمم", () => {

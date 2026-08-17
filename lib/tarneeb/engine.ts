@@ -12,6 +12,7 @@ import type {
   Trick,
 } from "./types";
 import { SUITS } from "./types";
+import { DEFAULT_OPPONENT_PERSONAS, getAiPersona } from "./personas";
 
 const RANKS: Rank[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
 const SEATS: Seat[] = [0, 1, 2, 3];
@@ -22,6 +23,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   targetScore: 31,
   aiLevel: "متوازن",
   aiStyle: "متوازن",
+  opponentPersonas: DEFAULT_OPPONENT_PERSONAS,
   tableTheme: "emerald",
   cardFaceTheme: "ivory",
   soundProfile: "متوازنة",
@@ -88,17 +90,17 @@ export function shuffle<T>(items: T[]): T[] {
   return shuffled;
 }
 
-function dealPlayers(): Player[] {
+function dealPlayers(personas = DEFAULT_OPPONENT_PERSONAS): Player[] {
   const deck = shuffle(createDeck());
-  const names = ["أنت", "ليان", "شريكك", "سامر"];
   return SEATS.map((seat) => ({
     id: seat,
-    name: names[seat],
+    name: seat === 0 ? "أنت" : getAiPersona(personas[seat as 1 | 2 | 3]).name,
     seat,
     team: teamOf(seat),
     hand: sortHand(deck.slice(seat * 13, seat * 13 + 13)),
     handCount: 13,
     isHuman: seat === 0,
+    personaId: seat === 0 ? undefined : personas[seat as 1 | 2 | 3],
   }));
 }
 
@@ -133,12 +135,12 @@ export function createHomeState(): MatchState {
   };
 }
 
-export function createRound(previous: MatchState, resetScores = false): MatchState {
+export function createRound(previous: MatchState, resetScores = false, personas = DEFAULT_OPPONENT_PERSONAS): MatchState {
   return {
     matchMode: "solo",
     phase: "bidding",
     round: previous.round + 1,
-    players: dealPlayers(),
+    players: dealPlayers(personas),
     bidding: emptyBidding(),
     trick: emptyTrick(0),
     lastTrick: null,

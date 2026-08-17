@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { GameSettings, MatchState, RoundRecord } from "./types";
+import { AI_PERSONAS, DEFAULT_OPPONENT_PERSONAS } from "./personas";
 
 const MATCH_KEY = "tarneeb.match.v1";
 const SETTINGS_KEY = "tarneeb.settings.v1";
@@ -16,6 +17,7 @@ export async function loadStoredMatch(): Promise<MatchState | null> {
     const players = parsed.players.map((player) => ({
       ...player,
       handCount: typeof player.handCount === "number" ? player.handCount : player.hand.length,
+      personaId: player.isHuman ? undefined : (player.personaId && player.personaId in AI_PERSONAS ? player.personaId : DEFAULT_OPPONENT_PERSONAS[player.id as 1 | 2 | 3]),
     }));
     const legacyBids = parsed.bidding?.bids?.map((entry) => ({
       ...entry,
@@ -64,7 +66,10 @@ export async function loadStoredSettings(): Promise<Partial<GameSettings> | null
     const cardFaceTheme = parsed.cardFaceTheme === "ivory" || parsed.cardFaceTheme === "parchment" || parsed.cardFaceTheme === "midnight" ? parsed.cardFaceTheme : "ivory";
     const soundProfile = parsed.soundProfile === "هادئة" || parsed.soundProfile === "متوازنة" || parsed.soundProfile === "بارزة" ? parsed.soundProfile : "متوازنة";
     const animationSpeed = parsed.animationSpeed === "هادئة" || parsed.animationSpeed === "متوازنة" || parsed.animationSpeed === "سريعة" ? parsed.animationSpeed : "متوازنة";
-    return { ...parsed, aiLevel, aiStyle, tableTheme, cardFaceTheme, soundProfile, animationSpeed };
+    const storedPersonas = parsed.opponentPersonas;
+    const personaFor = (seat: 1 | 2 | 3) => storedPersonas?.[seat] && storedPersonas[seat] in AI_PERSONAS ? storedPersonas[seat] : DEFAULT_OPPONENT_PERSONAS[seat];
+    const opponentPersonas = { 1: personaFor(1), 2: personaFor(2), 3: personaFor(3) };
+    return { ...parsed, aiLevel, aiStyle, tableTheme, cardFaceTheme, soundProfile, animationSpeed, opponentPersonas };
   } catch {
     return null;
   }
