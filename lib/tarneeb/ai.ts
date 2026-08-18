@@ -1,5 +1,6 @@
 import { cardBeats, legalCards, teamOf } from "./engine";
 import { buildAiVisibleKnowledge, countShownVoids, getAiContractPosture, isKnownSuitControl } from "./ai-knowledge";
+import { estimateAiDistribution, estimateOpponentTrumpRisk, estimatePartnerSuitSupport } from "./ai-probability";
 import { getAiPersona } from "./personas";
 import type { AiLevel, AiPersonaId, AiStyle, Card, MatchState, Seat, Suit } from "./types";
 import { SUITS } from "./types";
@@ -80,6 +81,7 @@ function chooseLeadCard(state: MatchState, playerId: Seat, playable: Card[], lev
   const opposingTeam = team === 0 ? 1 : 0;
   const knowledge = buildAiVisibleKnowledge(state, playerId);
   const posture = getAiContractPosture(state, playerId);
+  const distribution = estimateAiDistribution(state, playerId);
   const candidates = playable.filter((card) => card.suit !== trump);
   const pool = candidates.length > 0 ? candidates : playable;
   const scored = pool.map((card) => {
@@ -90,8 +92,26 @@ function chooseLeadCard(state: MatchState, playerId: Seat, playable: Card[], lev
     const controlBonus = isKnownSuitControl(card, knowledge)
       ? posture === "urgent-attack" || posture === "make-contract" ? 2.6 : 1.1
       : 0;
+    // AI 2.1: يقود نوعاً يُرجح أن شريكه يستطيع اتباعه، ويقيّم احتمال القطع بالطرنيب
+    // استناداً إلى فراغات الأنواع التي ظهرت فعلياً، لا إلى أيدي الخصوم المخفية.
+    const partnerSupport = distribution && card.suit !== trump
+      ? estimatePartnerSuitSupport(state, playerId, card.suit, distribution)
+      : 0;
+    const trumpRisk = distribution && card.suit !== trump
+      ? estimateOpponentTrumpRisk(state, playerId, card.suit, trump, distribution)
+      : 0;
+    const partnershipWeight = posture === "make-contract" || posture === "urgent-attack" ? 1.8 : 1.15;
     const rankIntent = (style === "مبادر" ? card.rank * 0.12 : style === "حذر" ? -card.rank * 0.04 : 0) + card.rank * persona.leadRankBias;
-    return { card, score: aiSuitStrength(state.players[playerId].hand, card.suit) + suitCards.length * 0.35 + rankIntent + controlBonus - exposedVoidPenalty };
+    return {
+      card,
+      score: aiSuitStrength(state.players[playerId].hand, card.suit)
+        + suitCards.length * 0.35
+        + rankIntent
+        + controlBonus
+        + partnerSupport * partnershipWeight
+        - trumpRisk * 3.2
+        - exposedVoidPenalty,
+    };
   });
   const bestScore = Math.max(...scored.map((entry) => entry.score));
   const bestSuitCards = scored.filter((entry) => entry.score === bestScore).map((entry) => entry.card);

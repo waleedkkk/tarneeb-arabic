@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { chooseAiBid, chooseAiCard, chooseAiTrump, estimateAiBid } from "../lib/tarneeb/ai";
 import { buildAiVisibleKnowledge, getAiContractPosture, isKnownSuitControl } from "../lib/tarneeb/ai-knowledge";
+import { estimateAiDistribution, estimateOpponentTrumpRisk, estimatePartnerSuitSupport } from "../lib/tarneeb/ai-probability";
 import { createHomeState, createRound } from "../lib/tarneeb/engine";
 import type { Card, MatchState } from "../lib/tarneeb/types";
 
@@ -152,5 +153,79 @@ describe("ذكاء خصوم طرنيب", () => {
     }, 1, [card("clubs", 8), card("clubs", 12)]);
 
     expect(chooseAiCard(state, 1, "خبير", "مبادر", "samar")).toEqual(card("clubs", 8));
+  });
+
+  it("يبني توزيع AI 2.1 نفسه مهما اختلفت أوراق الخصوم المخفية", () => {
+    const round = createRound(createHomeState(), true);
+    const visibleState = withAiHand(round, 1, [card("clubs", 10), card("spades", 4)]);
+    const changedHiddenHands: MatchState = {
+      ...visibleState,
+      players: visibleState.players.map((player) => {
+        if (player.id === 1) return player;
+        return {
+          ...player,
+          hand: player.id === 0 ? [card("hearts", 14)] : [card("diamonds", 2)],
+          handCount: player.handCount,
+        };
+      }),
+    };
+
+    const first = estimateAiDistribution(visibleState, 1);
+    const second = estimateAiDistribution(changedHiddenHands, 1);
+    expect(second.unseenCards.map((item) => item.id)).toEqual(first.unseenCards.map((item) => item.id));
+    expect(second.suitPresenceBySeat).toEqual(first.suitPresenceBySeat);
+  });
+
+  it("يعامل النوع الذي ثبت فراغ الشريك منه كدعم صفري ولا يخلط ذلك بأوراقه المخفية", () => {
+    const round = createRound(createHomeState(), true);
+    const state = withAiHand({
+      ...round,
+      matchLog: {
+        ...round.matchLog,
+        tricks: [{
+          trickNumber: 1,
+          winnerId: 0,
+          winnerName: "أنت",
+          plays: [
+            { playerId: 0, playerName: "أنت", card: card("hearts", 14) },
+            { playerId: 1, playerName: "ليان", card: card("hearts", 2) },
+            { playerId: 2, playerName: "فارس", card: card("hearts", 3) },
+            { playerId: 3, playerName: "سامر", card: card("clubs", 4) },
+          ],
+        }],
+      },
+    }, 1, [card("spades", 6)]);
+
+    const estimate = estimateAiDistribution(state, 1);
+    expect(estimatePartnerSuitSupport(state, 1, "hearts", estimate)).toBe(0);
+    expect(estimate.expectedSuitCardsBySeat[3].hearts).toBe(0);
+  });
+
+  it("يرفع خطر قطع الخصم بالطرنيب فقط عندما كشف فراغه من نوع القيادة", () => {
+    const round = createRound(createHomeState(), true);
+    const base = withAiHand({
+      ...round,
+      bidding: { ...round.bidding, trumpSuit: "spades" },
+    }, 1, [card("clubs", 6)]);
+    const withOpponentVoid: MatchState = {
+      ...base,
+      matchLog: {
+        ...base.matchLog,
+        tricks: [{
+          trickNumber: 1,
+          winnerId: 0,
+          winnerName: "أنت",
+          plays: [
+            { playerId: 0, playerName: "أنت", card: card("hearts", 8) },
+            { playerId: 1, playerName: "ليان", card: card("hearts", 2) },
+            { playerId: 2, playerName: "فارس", card: card("clubs", 3) },
+            { playerId: 3, playerName: "سامر", card: card("hearts", 4) },
+          ],
+        }],
+      },
+    };
+
+    expect(estimateOpponentTrumpRisk(base, 1, "hearts", "spades")).toBe(0);
+    expect(estimateOpponentTrumpRisk(withOpponentVoid, 1, "hearts", "spades")).toBeGreaterThan(0);
   });
 });
