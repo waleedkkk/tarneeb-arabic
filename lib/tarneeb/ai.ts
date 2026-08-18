@@ -1,4 +1,5 @@
 import { cardBeats, legalCards, teamOf } from "./engine";
+import { buildAiVisibleKnowledge, countShownVoids, getAiContractPosture, isKnownSuitControl } from "./ai-knowledge";
 import { getAiPersona } from "./personas";
 import type { AiLevel, AiPersonaId, AiStyle, Card, MatchState, Seat, Suit } from "./types";
 import { SUITS } from "./types";
@@ -71,25 +72,26 @@ function currentWinningPlay(state: MatchState) {
   return state.trick.plays.reduce((winner, play) => cardBeats(play.card, winner.card, leadSuit, trumpSuit) ? play : winner);
 }
 
-function opponentsHaveShownVoid(state: MatchState, team: 0 | 1, suit: Suit) {
-  return state.matchLog.tricks.some((entry) => {
-    const leadSuit = entry.plays[0]?.card.suit;
-    return leadSuit === suit && entry.plays.slice(1).some((play) => teamOf(play.playerId) !== team && play.card.suit !== suit);
-  });
-}
-
 function chooseLeadCard(state: MatchState, playerId: Seat, playable: Card[], level: AiLevel, style: AiStyle, personaId?: AiPersonaId) {
   const persona = getAiPersona(personaId);
   if (level === "مبتدئ") return [...playable].sort(persona.leadRankBias > 0.1 ? byHighestRank : byLowestRank)[0];
   const trump = state.bidding.trumpSuit!;
   const team = teamOf(playerId);
+  const opposingTeam = team === 0 ? 1 : 0;
+  const knowledge = buildAiVisibleKnowledge(state, playerId);
+  const posture = getAiContractPosture(state, playerId);
   const candidates = playable.filter((card) => card.suit !== trump);
   const pool = candidates.length > 0 ? candidates : playable;
   const scored = pool.map((card) => {
     const suitCards = cardsOfSuit(state.players[playerId].hand, card.suit);
-    const exposedVoidPenalty = level === "خبير" && opponentsHaveShownVoid(state, team, card.suit) ? 4 + (persona.tendency === "تحكّم" ? 1.2 : 0) : 0;
+    const opponentVoidCount = countShownVoids(knowledge, opposingTeam, card.suit);
+    // لا يقود الخبير نوعًا ثبت أن خصومه خالون منه إلا عند الضرورة؛ فقد يتحول إلى فرصة ترنيب لهم.
+    const exposedVoidPenalty = level === "خبير" && card.suit !== trump ? opponentVoidCount * (4 + (persona.tendency === "تحكّم" ? 1.2 : 0)) : 0;
+    const controlBonus = isKnownSuitControl(card, knowledge)
+      ? posture === "urgent-attack" || posture === "make-contract" ? 2.6 : 1.1
+      : 0;
     const rankIntent = (style === "مبادر" ? card.rank * 0.12 : style === "حذر" ? -card.rank * 0.04 : 0) + card.rank * persona.leadRankBias;
-    return { card, score: aiSuitStrength(state.players[playerId].hand, card.suit) + suitCards.length * 0.35 + rankIntent - exposedVoidPenalty };
+    return { card, score: aiSuitStrength(state.players[playerId].hand, card.suit) + suitCards.length * 0.35 + rankIntent + controlBonus - exposedVoidPenalty };
   });
   const bestScore = Math.max(...scored.map((entry) => entry.score));
   const bestSuitCards = scored.filter((entry) => entry.score === bestScore).map((entry) => entry.card);
@@ -102,6 +104,7 @@ export function chooseAiCard(state: MatchState, playerId: 1 | 2 | 3, level: AiLe
   const playable = legalCards(hand, state.trick);
   const leadSuit = state.trick.leadSuit;
   const trumpSuit = state.bidding.trumpSuit!;
+  const posture = getAiContractPosture(state, playerId);
   if (!leadSuit || state.trick.plays.length === 0) return chooseLeadCard(state, playerId, playable, level, style, personaId);
 
   const winner = currentWinningPlay(state);
@@ -113,13 +116,16 @@ export function chooseAiCard(state: MatchState, playerId: 1 | 2 | 3, level: AiLe
     return [...(nonTrump.length > 0 ? nonTrump : playable)].sort(byLowestRank)[0];
   }
   if (winningOptions.length > 0) {
-    const ordered = [...winningOptions].sort((style === "مبادر" && level !== "مبتدئ") || persona.preferWinningPressure ? byHighestRank : byLowestRank);
+    // عند الحاجة إلى العقد أو إسقاطه، يضمن اللمّة بأقل ورقة رابحة ممكنة ويحفظ السيطرة للجولات التالية.
+    const mustSecureThisTrick = posture === "urgent-attack" || posture === "make-contract" || posture === "set-pressure";
+    const ordered = [...winningOptions].sort(mustSecureThisTrick || !((style === "مبادر" && level !== "مبتدئ") || persona.preferWinningPressure) ? byLowestRank : byHighestRank);
     return ordered[0];
   }
   if (level === "خبير") {
     // عند عدم الإمكان، يتخلص الخبير من أعلى ورقة غير رابحة مع الحفاظ على الطرنيب ما استطاع.
     const discardPool = playable.filter((card) => card.suit !== trumpSuit);
-    return [...(discardPool.length > 0 ? discardPool : playable)].sort(style === "حذر" || persona.tendency === "استدراج" ? byLowestRank : byHighestRank)[0];
+    const preserveFutureControls = posture === "urgent-attack" || posture === "make-contract";
+    return [...(discardPool.length > 0 ? discardPool : playable)].sort(preserveFutureControls || style === "حذر" || persona.tendency === "استدراج" ? byLowestRank : byHighestRank)[0];
   }
   return [...playable].sort(byLowestRank)[0];
 }
