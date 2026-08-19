@@ -84,6 +84,7 @@ function FanCardSlot({ card, compact, disabled, dragEnabled, entranceDelay, card
   const dragY = useSharedValue(0);
   const dragLift = useSharedValue(0);
   const [departing, setDeparting] = useState(false);
+  const [pressTick, setPressTick] = useState(0);
   const dropThreshold = getCardDragDropThreshold(compact);
   const motion = animationSpeed === "هادئة" ? 1.28 : animationSpeed === "سريعة" ? 0.72 : 1;
 
@@ -102,6 +103,7 @@ function FanCardSlot({ card, compact, disabled, dragEnabled, entranceDelay, card
     );
   };
   const notifyDragState = (dragging: boolean) => onDragStateChange?.(dragging);
+  const bumpPressSignal = () => setPressTick((tick) => tick + 1);
   const departureStyle = useAnimatedStyle(() => ({
     opacity: 1 - departure.value * 0.62,
     transform: [
@@ -139,12 +141,25 @@ function FanCardSlot({ card, compact, disabled, dragEnabled, entranceDelay, card
     .onFinalize(() => {
       runOnJS(notifyDragState)(false);
     });
+  // يُدار النقر والسحب عبر GestureDetector واحد. لا نمرر onPress إلى
+  // PlayingCard كي لا تختلط Pressable الداخلية مع RNGH على Android الحقيقي.
+  const tap = Gesture.Tap()
+    .enabled(Boolean(onPlay) && !disabled && !departing)
+    .maxDuration(400)
+    .hitSlop(hitSlop)
+    .onBegin(() => {
+      runOnJS(bumpPressSignal)();
+    })
+    .onEnd((_event, success) => {
+      if (success) runOnJS(playCard)();
+    });
+  const composedGesture = Gesture.Race(drag, tap);
 
   return (
     <Animated.View style={[styles.cardSlot, { left: position.left, bottom: position.bottom, zIndex: position.zIndex }, departureStyle]}>
-      <GestureDetector gesture={drag}>
-        <View>
-          <PlayingCard card={card} compact={compact} entranceDelay={entranceDelay} cardBackPattern={cardBackPattern} cardFaceTheme={cardFaceTheme} animationSpeed={animationSpeed} dealFlip={dealFlip} disabled={disabled || departing} hitSlop={hitSlop} edgeFeedback={edgeFeedback} onPress={onPlay ? playCard : undefined} />
+      <GestureDetector gesture={composedGesture}>
+        <View collapsable={false}>
+          <PlayingCard card={card} compact={compact} entranceDelay={entranceDelay} cardBackPattern={cardBackPattern} cardFaceTheme={cardFaceTheme} animationSpeed={animationSpeed} dealFlip={dealFlip} disabled={disabled || departing} edgeFeedback={edgeFeedback} pressSignal={pressTick} />
         </View>
       </GestureDetector>
     </Animated.View>

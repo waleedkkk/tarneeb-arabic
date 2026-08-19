@@ -1,12 +1,14 @@
 import { Pressable, StyleSheet, Text, type Insets, View } from "react-native";
 import { cardLabel, rankLabel, suitSymbol } from "@/lib/tarneeb/engine";
 import type { AnimationSpeed, Card as CardType, CardBackPattern, CardFaceTheme } from "@/lib/tarneeb/types";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from "react-native-reanimated";
 
 interface CardProps {
   card: CardType;
   onPress?: () => void;
+  /** إشارة خارجية لإطلاق وميض الحافة عندما يدير GestureDetector اللمس. */
+  pressSignal?: number;
   disabled?: boolean;
   selected?: boolean;
   compact?: boolean;
@@ -19,7 +21,7 @@ interface CardProps {
   animationSpeed?: AnimationSpeed;
 }
 
-export function PlayingCard({ card, onPress, disabled = false, selected = false, compact = false, hitSlop, edgeFeedback = false, entranceDelay = 0, dealFlip = false, cardBackPattern = "royal", cardFaceTheme = "ivory", animationSpeed = "متوازنة" }: CardProps) {
+export function PlayingCard({ card, onPress, pressSignal, disabled = false, selected = false, compact = false, hitSlop, edgeFeedback = false, entranceDelay = 0, dealFlip = false, cardBackPattern = "royal", cardFaceTheme = "ivory", animationSpeed = "متوازنة" }: CardProps) {
   const red = card.suit === "hearts" || card.suit === "diamonds";
   const faceTheme = CARD_FACE_THEMES[cardFaceTheme];
   const motion = animationSpeed === "هادئة" ? 1.28 : animationSpeed === "سريعة" ? 0.72 : 1;
@@ -63,6 +65,17 @@ export function PlayingCard({ card, onPress, disabled = false, selected = false,
       withTiming(0, { duration: 250, easing: Easing.out(Easing.cubic) }),
     );
   };
+  const isFirstPressSignal = useRef(true);
+  useEffect(() => {
+    if (pressSignal === undefined) return;
+    if (isFirstPressSignal.current) {
+      isFirstPressSignal.current = false;
+      return;
+    }
+    showEdgeFeedback();
+    // showEdgeFeedback يعتمد على قيم العرض الحالية؛ تتغير الإشارة فقط عند النقر.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pressSignal]);
   const content = (
     <Animated.View style={[styles.cardStage, compact && styles.compactCardStage, revealStyle]}>
       <Animated.View style={[styles.card, styles.cardFace, faceTheme.card, compact && styles.compactCard, selected && styles.selectedCard, disabled && styles.disabledCard, faceFlipStyle]}>

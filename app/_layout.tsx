@@ -20,8 +20,17 @@ export default function RootLayout() {
   useEffect(() => {
     if (Platform.OS !== "web" && rtlWasJustEnabled) {
       const handle = setTimeout(() => {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require("react-native").RestartAndroid?.();
+        // react-native-restart يعيد إنشاء الـ Activity فعليًا (kill + relaunch)،
+        // وهو المطلوب حتى يعيد Android قراءة فلاغ I18nManager المخزّن عند أول تشغيل.
+        // نُبقي الاستيراد محليًا حتى لا تدخل الوحدة الأصلية في معاينة الويب.
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const restartModule = require("react-native-restart");
+          const restart = restartModule.default?.restart ?? restartModule.restart;
+          restart?.();
+        } catch {
+          // في Expo Go لا تتوفر الوحدة الأصلية؛ ستُطبَّق RTL عند إعادة الفتح اليدوية.
+        }
       }, 600);
       return () => clearTimeout(handle);
     }
