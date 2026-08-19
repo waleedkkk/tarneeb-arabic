@@ -1,6 +1,7 @@
 import { cardBeats, legalCards, teamOf } from "./engine";
 import { buildAiVisibleKnowledge, countShownVoids, getAiContractPosture, isKnownSuitControl } from "./ai-knowledge";
 import { estimateAiDistribution, estimateOpponentTrumpRisk, estimatePartnerSuitSupport } from "./ai-probability";
+import { solveEndgame } from "./ai-endgame";
 import { getAiPersona } from "./personas";
 import type { AiLevel, AiPersonaId, AiStyle, Card, MatchState, Seat, Suit } from "./types";
 import { SUITS } from "./types";
@@ -125,7 +126,14 @@ export function chooseAiCard(state: MatchState, playerId: 1 | 2 | 3, level: AiLe
   const leadSuit = state.trick.leadSuit;
   const trumpSuit = state.bidding.trumpSuit!;
   const posture = getAiContractPosture(state, playerId);
-  if (!leadSuit || state.trick.plays.length === 0) return chooseLeadCard(state, playerId, playable, level, style, personaId);
+  if (!leadSuit || state.trick.plays.length === 0) {
+    // AI 3.0: عند قيادة لمّة جديدة في نهاية الجولة، يحسم حلّ نهاية الجولة الورقة
+    // عبر محاكاة مونت كارلو لبقية الجولة، ويستخدم قيادتها كأول ورقة في المحاكاة.
+    // الحلّ مقيّد بحارس معرفة ظاهرة داخل solveEndgame فلا يُفعّل عشوائيًا.
+    const endgameLead = solveEndgame(state, playerId, level);
+    if (endgameLead) return endgameLead.card;
+    return chooseLeadCard(state, playerId, playable, level, style, personaId);
+  }
 
   const winner = currentWinningPlay(state);
   const winningOptions = playable.filter((card) => cardBeats(card, winner.card, leadSuit, trumpSuit));
