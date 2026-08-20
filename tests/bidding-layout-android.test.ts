@@ -45,4 +45,10 @@ describe("Android SafeArea layout for bidding screens", () => {
     expect(remaining.length).toBe(2);
     expect(src.includes('edges={["top", "left", "right", "bottom"]} style={styles.homeSafe}')).toBe(true);
   });
+
+  it("تربط شاشة المزايدة ScrollView بارتفاع الحاوية الأصلي وتسمح للمحتوى بالتمدد", () => {
+    expect(src).toContain('<ScrollView style={styles.formScroll} contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 34 }]}>');
+    expect(src).toContain('formScroll: { flex: 1 }');
+    expect(src).toContain('scrollContent: { flexGrow: 1, padding: 20, paddingBottom: 34 }');
+  });
 });

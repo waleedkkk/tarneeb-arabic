@@ -141,7 +141,7 @@ function Bidding() {
   const insets = useSafeAreaInsets();
   return (
     <SafeAreaView edges={["top", "left", "right"]} style={styles.safe}>
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 34 }]}>
+      <ScrollView style={styles.formScroll} contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 34 }]}>
         <RoundHeader round={state.round} label="المزايدة" action={<View style={styles.headerActionRow}><MatchLogButton compact /><MatchActions /></View>} />
         <View style={styles.panel}>
           <Text style={styles.panelEyebrow}>العرض الأعلى</Text>
@@ -282,7 +282,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
   },
   buttonDisabled: { opacity: 0.45 },
-  scrollContent: { padding: 20, paddingBottom: 34 },
+  formScroll: { flex: 1 },
+  scrollContent: { flexGrow: 1, padding: 20, paddingBottom: 34 },
   roundHeader: { flexDirection: arabicRow(), justifyContent: "space-between", alignItems: "center", marginBottom: 24 },
   roundBrand: { color: "#E3B341", fontSize: 25, fontWeight: "900", writingDirection: "rtl" },
   roundNumber: { color: "#FFF8E7", textAlign: "right", fontWeight: "800", writingDirection: "rtl" },
