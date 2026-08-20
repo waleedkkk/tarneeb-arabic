@@ -21,4 +21,9 @@ describe("card-fan.tsx: لا تعارض بين Pressable وGestureDetector", () 
     const playingCardCall = src.match(/<PlayingCard[^]*?\/>/)?.[0] ?? "";
     expect(playingCardCall).toMatch(/pressSignal=/);
   });
+
+  it("لا يستدعي دالة JavaScript مساعدة من داخل Worklet onEnd", () => {
+    expect(src).not.toMatch(/isCardDragDrop\(/);
+    expect(src).toMatch(/event\.translationY\s*<=\s*-dropThreshold/);
+  });
 });

@@ -4,7 +4,7 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
 
 import { PlayingCard } from "./card";
-import { getBalancedFanCardPosition, getCardDragDropThreshold, getFanEdgeHitSlop, getResponsiveFanMetrics, isCardDragDrop } from "@/lib/tarneeb/card-fan-layout";
+import { getBalancedFanCardPosition, getCardDragDropThreshold, getFanEdgeHitSlop, getResponsiveFanMetrics } from "@/lib/tarneeb/card-fan-layout";
 import type { AnimationSpeed, Card, CardBackPattern, CardFaceTheme, CardFanCurve } from "@/lib/tarneeb/types";
 
 interface CurvedCardHandProps {
@@ -125,7 +125,10 @@ function FanCardSlot({ card, compact, disabled, dragEnabled, entranceDelay, card
       dragY.value = Math.min(event.translationY, 16);
     })
     .onEnd((event) => {
-      const reachesTable = isCardDragDrop(event.translationY, compact);
+      // onEnd runs as a native Reanimated Worklet. Keep the drop comparison
+      // self-contained here: importing and invoking a plain JS helper causes
+      // "Object is not a function" on Android when the gesture completes.
+      const reachesTable = event.translationY <= -dropThreshold;
       if (reachesTable) {
         dragX.value = withTiming(event.translationX * 0.25, { duration: 110 * motion, easing: Easing.out(Easing.cubic) });
         dragY.value = withTiming(-dropThreshold - 28, { duration: 110 * motion, easing: Easing.out(Easing.cubic) });
