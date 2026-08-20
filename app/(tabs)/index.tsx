@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useGame } from "@/lib/tarneeb/game-context";
 import { useLocalRoom } from "@/lib/tarneeb/local-room-context";
+import { getTabScreenBottomPadding, TAB_SCREEN_SAFE_EDGES } from "@/lib/tarneeb/native-screen-layout";
 import { cardLabel, legalCards, suitName, suitStrength, suitSymbol } from "@/lib/tarneeb/engine";
 import type { MatchState, Suit } from "@/lib/tarneeb/types";
 import { GameTable, LastTrickBanner } from "@/components/tarneeb/table";
@@ -140,8 +141,8 @@ function Bidding() {
   const strongest = [...strengths].sort((a, b) => b.score - a.score)[0];
   const insets = useSafeAreaInsets();
   return (
-    <SafeAreaView edges={["top", "left", "right"]} style={styles.safe}>
-      <ScrollView style={styles.formScroll} contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 34 }]}>
+    <SafeAreaView edges={TAB_SCREEN_SAFE_EDGES} style={styles.safe}>
+      <ScrollView style={styles.formScroll} contentContainerStyle={[styles.scrollContent, { paddingBottom: getTabScreenBottomPadding(insets.bottom, 34) }]}>
         <RoundHeader round={state.round} label="المزايدة" action={<View style={styles.headerActionRow}><MatchLogButton compact /><MatchActions /></View>} />
         <View style={styles.panel}>
           <Text style={styles.panelEyebrow}>العرض الأعلى</Text>
@@ -174,8 +175,8 @@ function TrumpSelection() {
   const strengths = SUITS.map((suit) => suitStrength(state.players[0].hand, suit));
   const insets = useSafeAreaInsets();
   return (
-    <SafeAreaView edges={["top", "left", "right"]} style={styles.safe}>
-      <ScrollView contentContainerStyle={[styles.trumpContent, { paddingBottom: insets.bottom + 24 }]}>
+    <SafeAreaView edges={TAB_SCREEN_SAFE_EDGES} style={styles.safe}>
+      <ScrollView style={styles.formScroll} contentContainerStyle={[styles.trumpContent, { paddingBottom: getTabScreenBottomPadding(insets.bottom, 24) }]}>
         <View style={styles.trumpTopBar}><View style={styles.headerActionRow}><MatchLogButton compact /><MatchActions /></View></View>
         <Text style={styles.kicker}>الطلب {state.bidding.highestBid}</Text>
         <Text style={styles.pageTitle}>{humanIsBidder ? "اختر الطرنيب" : "يختار الخصم الطرنيب"}</Text>
@@ -210,8 +211,8 @@ function RoundResult() {
     game.exitMatch();
   };
   return (
-    <SafeAreaView edges={["top", "left", "right"]} style={styles.safe}>
-      <View style={[styles.centerPage, { paddingBottom: insets.bottom + 24 }]}>
+    <SafeAreaView edges={TAB_SCREEN_SAFE_EDGES} style={styles.safe}>
+      <ScrollView style={styles.formScroll} contentContainerStyle={[styles.resultContent, { paddingBottom: getTabScreenBottomPadding(insets.bottom, 24) }]}>
         <Text style={styles.kicker}>نهاية الجولة {state.round}</Text>
         <Text style={styles.pageTitle}>{matchWinner ? `فاز ${matchWinner} بالمباراة` : summary.madeContract ? "تم تحقيق الطلب" : "لم يتحقق الطلب"}</Text>
         <Text style={styles.pageSubtitle}>كان الطلب {summary.bid}، وحصل فريقك على {summary.roundTricks[0]} لمم مقابل {summary.roundTricks[1]} للخصم.</Text>
@@ -222,7 +223,7 @@ function RoundResult() {
           <Pressable accessibilityRole="button" accessibilityLabel="إعادة اللعب مباشرة" disabled={!canRestart} onPress={restart} style={({ pressed }) => [styles.roundShortcut, styles.roundShortcutReplay, pressed && canRestart && styles.buttonPressed, !canRestart && styles.roundShortcutDisabled]}><Text style={styles.roundShortcutIcon}>↻</Text><View><Text style={styles.roundShortcutTitle}>إعادة اللعب</Text><Text style={styles.roundShortcutHint}>{canRestart ? "مباراة جديدة فورًا" : "للمضيف فقط"}</Text></View></Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="خروج سريع من المباراة" onPress={() => setExitConfirmationVisible(true)} style={({ pressed }) => [styles.roundShortcut, styles.roundShortcutExit, pressed && styles.buttonPressed]}><Text style={styles.roundShortcutIcon}>⌂</Text><View><Text style={styles.roundShortcutTitle}>خروج سريع</Text><Text style={styles.roundShortcutHint}>العودة للرئيسية</Text></View></Pressable>
         </View>
-      </View>
+      </ScrollView>
       <Modal transparent visible={exitConfirmationVisible} animationType="fade" onRequestClose={() => setExitConfirmationVisible(false)}><View style={styles.gameMenuModal}><Pressable accessibilityLabel="إلغاء الخروج" style={styles.gameMenuBackdrop} onPress={() => setExitConfirmationVisible(false)} /><View style={styles.gameMenuSheet}><View style={styles.gameMenuHandle} /><Text style={styles.gameMenuTitle}>إنهاء المباراة؟</Text><Text style={styles.gameMenuDescription}>{isRoomMatch ? "ستغادر الغرفة المحلية ولن تستطيع متابعة هذه المباراة من هذا الجهاز." : "ستنهي المباراة الحالية وسيُحذف التقدم المحفوظ لهذه المباراة."}</Text><View style={styles.confirmationButtons}><Pressable onPress={() => setExitConfirmationVisible(false)} style={({ pressed }) => [styles.confirmationCancel, pressed && styles.buttonPressed]}><Text style={styles.confirmationCancelText}>إلغاء</Text></Pressable><Pressable onPress={exit} style={({ pressed }) => [styles.confirmationDestructive, pressed && styles.buttonPressed]}><Text style={styles.confirmationDestructiveText}>إنهاء المباراة</Text></Pressable></View></View></View></Modal>
     </SafeAreaView>
   );
@@ -352,6 +353,7 @@ const styles = StyleSheet.create({
   secondaryButton: { minHeight: 50, borderRadius: 14, borderWidth: 1, borderColor: "#B4D6C7", alignItems: "center", justifyContent: "center", marginTop: 16 },
   secondaryButtonText: { color: "#FFF8E7", fontSize: 15, fontWeight: "800", writingDirection: "rtl" },
   centerPage: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  resultContent: { flexGrow: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   trumpContent: { flexGrow: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 20, paddingVertical: 24 },
   kicker: { color: "#E3B341", fontSize: 14, fontWeight: "800", writingDirection: "rtl" },
   pageTitle: { color: "#FFF8E7", fontSize: 31, fontWeight: "900", marginTop: 10, textAlign: "center", writingDirection: "rtl" },

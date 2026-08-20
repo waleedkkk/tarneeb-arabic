@@ -1,7 +1,8 @@
 import { arabicRow } from "@/lib/rtl-style";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useGame } from "@/lib/tarneeb/game-context";
+import { getTabScreenBottomPadding, TAB_SCREEN_SAFE_EDGES } from "@/lib/tarneeb/native-screen-layout";
 import { CardBack } from "@/components/tarneeb/card";
 import { AI_PERSONAS, getAiPersona } from "@/lib/tarneeb/personas";
 import type { AiLevel, AiPersonaId, AiStyle, AnimationSpeed, CardBackPattern, CardFaceTheme, CardFanCurve, OpponentCardDensity, OpponentPersonaAssignments, SoundProfile, TableTextSize, TableTheme, TurnTimerSeconds } from "@/lib/tarneeb/types";
@@ -64,6 +65,7 @@ const ANIMATION_SPEEDS: { value: AnimationSpeed; label: string }[] = [
 
 export default function SettingsScreen() {
   const { settings, updateSettings } = useGame();
+  const insets = useSafeAreaInsets();
   const selectOpponentPersona = (seat: 1 | 2 | 3, personaId: AiPersonaId) => {
     const current = settings.opponentPersonas;
     const currentSeat = ([1, 2, 3] as const).find((candidate) => current[candidate] === personaId);
@@ -72,8 +74,8 @@ export default function SettingsScreen() {
     updateSettings({ opponentPersonas: next });
   };
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right", "bottom"]}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <SafeAreaView style={styles.safe} edges={TAB_SCREEN_SAFE_EDGES}>
+      <ScrollView contentContainerStyle={[styles.content, { flexGrow: 1, paddingBottom: getTabScreenBottomPadding(insets.bottom, 40) }]}>
         <Text style={styles.title}>الإعدادات</Text>
         <Text style={styles.subtitle}>خصص النسخة المحلية من طرنيب بما يناسب جلستك.</Text>
         <Section title="هدف المباراة"><View style={styles.choiceRow}>{([31, 41, 61] as const).map((score) => <Choice key={score} label={`${score} نقطة`} active={settings.targetScore === score} onPress={() => updateSettings({ targetScore: score })} />)}</View></Section>
