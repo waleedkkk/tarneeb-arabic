@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { cardBeats, createHomeState, createRound, DEFAULT_SETTINGS, legalCards, playCard, resolveTrick, submitBid, suitStrength } from "../lib/tarneeb/engine";
+import { cardBeats, createHomeState, createRound, DEFAULT_SETTINGS, legalCards, playCard, resolveTrick, submitBid, suitName, suitStrength } from "../lib/tarneeb/engine";
 import type { Card, Trick } from "../lib/tarneeb/types";
 
 const card = (suit: Card["suit"], rank: Card["rank"]): Card => ({ id: `${suit}-${rank}`, suit, rank });
 
 describe("محرك طرنيب", () => {
+  it("يعرض clubs باسم سباتي مع إبقاء المفتاح الداخلي ثابتًا", () => {
+    expect(suitName("clubs")).toBe("سباتي");
+  });
+
   it("يلزم اللاعب باتباع النوع المقاد عند توفره", () => {
     const hand = [card("hearts", 2), card("spades", 14)];
     const trick: Trick = { leaderId: 1, leadSuit: "hearts", plays: [{ playerId: 1, card: card("hearts", 8) }] };

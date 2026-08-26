@@ -52,7 +52,7 @@ export function suitSymbol(suit: Suit): string {
 }
 
 export function suitName(suit: Suit): string {
-  return { clubs: "نوادي", diamonds: "ديناري", hearts: "كبة", spades: "بستوني" }[suit];
+  return { clubs: "سباتي", diamonds: "ديناري", hearts: "كبة", spades: "بستوني" }[suit];
 }
 
 export function rankLabel(rank: Rank): string {
