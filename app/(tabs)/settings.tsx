@@ -1,10 +1,13 @@
 import { arabicRow } from "@/lib/rtl-style";
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { Pressable, ScrollView, Share, StyleSheet, Switch, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import * as Clipboard from "expo-clipboard";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useGame } from "@/lib/tarneeb/game-context";
 import { getTabScreenBottomPadding, TAB_SCREEN_SAFE_EDGES } from "@/lib/tarneeb/native-screen-layout";
 import { CardBack } from "@/components/tarneeb/card";
 import { AI_PERSONAS, getAiPersona } from "@/lib/tarneeb/personas";
+import { clearDiagnostics, formatDiagnosticReport, readDiagnostics, type DiagnosticEntry } from "@/lib/tarneeb/diagnostics";
 import type { AiLevel, AiPersonaId, AiStyle, AnimationSpeed, CardBackPattern, CardFaceTheme, CardFanCurve, OpponentCardDensity, OpponentPersonaAssignments, SoundProfile, TableTextSize, TableTheme, TurnTimerSeconds } from "@/lib/tarneeb/types";
 
 const CARD_FAN_CURVES: { value: CardFanCurve; label: string }[] = [
@@ -96,6 +99,7 @@ export default function SettingsScreen() {
         <Section title="قراءة الطاولة"><View style={styles.choiceRow}>{TABLE_TEXT_SIZES.map((size) => <Choice key={size.value} label={size.label} active={settings.tableTextSize === size.value} onPress={() => updateSettings({ tableTextSize: size.value })} />)}</View><Text style={styles.curveDescription}>يكبّر أسماء اللاعبين والنتائج وبيانات الطرنيب داخل الطاولة لتسهيل القراءة. يُطبّق فورًا ويُحفظ على جهازك.</Text></Section>
         <Section title="تكديس أوراق الخصوم"><View style={styles.choiceRow}>{OPPONENT_CARD_DENSITIES.map((density) => <Choice key={density.value} label={density.label} active={settings.opponentCardDensity === density.value} onPress={() => updateSettings({ opponentCardDensity: density.value })} />)}</View><Text style={styles.curveDescription}>يتحكم في تباعد أوراق الخصوم على الطاولة. اختر المتقارب للشاشات الصغيرة أو المتباعد لتمييز الأوراق أكثر.</Text></Section>
         <Section title="للاعبين المتقدمين"><ToggleRow label="مؤشر قوة الأنواع" description="يعرض الاقتراح والدرجات وأيقونة شرح طريقة الاحتساب في المزايدة." value={settings.showStrengthIndicator} onChange={(showStrengthIndicator) => updateSettings({ showStrengthIndicator })} /><ToggleRow label="بطاقات تعريف الخصوم" description="اعرض ملف كل خصم وأسلوب لعبه عند النقر على صورته الرمزية أثناء المباراة." value={settings.showOpponentProfileCards} onChange={(showOpponentProfileCards) => updateSettings({ showOpponentProfileCards })} /></Section>
+        <DiagnosticPanel />
         <View style={styles.note}><Text style={styles.noteTitle}>اللعب الجماعي</Text><Text style={styles.noteText}>يمكنك إنشاء غرفة محلية وضم ثلاثة لاعبين عبر الشبكة نفسها أو نقطة الاتصال، من دون حاجة إلى الإنترنت.</Text></View>
       </ScrollView>
     </SafeAreaView>
@@ -112,6 +116,49 @@ function OpponentPersonaPicker({ seat, value, onSelect }: { seat: 1 | 2 | 3; val
 }
 function ToggleRow({ label, description, value, onChange }: { label: string; description: string; value: boolean; onChange: (value: boolean) => void }) { return <View style={styles.toggleRow}><Switch value={value} onValueChange={onChange} trackColor={{ false: "#365A4C", true: "#D39F28" }} thumbColor="#FFF8E7" /><View style={styles.toggleText}><Text style={styles.toggleLabel}>{label}</Text><Text style={styles.toggleDescription}>{description}</Text></View></View>; }
 
+function DiagnosticPanel() {
+  const [entries, setEntries] = useState<DiagnosticEntry[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
+  const refresh = async () => setEntries(await readDiagnostics());
+  useEffect(() => { void refresh(); }, []);
+  const report = formatDiagnosticReport(entries);
+  const latest = entries[0];
+  const copy = async () => {
+    try {
+      await Clipboard.setStringAsync(report);
+      setNotice("تم نسخ السجل. الصقه في المحادثة عند طلب الدعم.");
+    } catch {
+      setNotice("تعذر نسخ السجل على هذا الجهاز.");
+    }
+  };
+  const share = async () => {
+    try {
+      await Share.share({ title: "سجل تشخيص طرنيب", message: report });
+    } catch {
+      setNotice("تعذر فتح قائمة المشاركة.");
+    }
+  };
+  const clear = async () => {
+    await clearDiagnostics();
+    await refresh();
+    setNotice("تم مسح السجل من هذا الهاتف.");
+  };
+  return <Section title="التشخيص"><Text style={styles.curveDescription}>يحفظ هذا السجل الأخطاء ومعلومات الإصدار والمنصة فقط. لا يتضمن أوراق اللاعبين أو رموز الغرفة أو مفاتيح الاتصال.</Text><Text style={diagnosticStyles.status}>{entries.length === 0 ? "لا توجد أخطاء محفوظة." : `${entries.length} سجل محفوظ`}</Text>{latest && <Text selectable style={diagnosticStyles.latest}>{latest.at} · {latest.kind}{"\n"}{latest.message}</Text>}<View style={diagnosticStyles.actions}><DiagnosticAction label="تحديث" onPress={() => { void refresh(); }} /><DiagnosticAction label="نسخ السجل" onPress={() => { void copy(); }} /><DiagnosticAction label="مشاركة" onPress={() => { void share(); }} /></View>{entries.length > 0 && <DiagnosticAction label="مسح السجل" destructive onPress={() => { void clear(); }} />}{notice && <Text style={diagnosticStyles.notice}>{notice}</Text>}</Section>;
+}
+
+function DiagnosticAction({ label, destructive = false, onPress }: { label: string; destructive?: boolean; onPress: () => void }) { return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [diagnosticStyles.action, destructive && diagnosticStyles.destructiveAction, pressed && styles.pressed]}><Text style={[diagnosticStyles.actionText, destructive && diagnosticStyles.destructiveText]}>{label}</Text></Pressable>; }
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#0E3B2E", direction: "ltr" }, content: { padding: 22, paddingBottom: 40 }, title: { color: "#FFF8E7", fontSize: 31, fontWeight: "900", textAlign: "right", writingDirection: "rtl" }, subtitle: { color: "#B4D6C7", fontSize: 14, lineHeight: 21, textAlign: "right", marginTop: 4, writingDirection: "rtl" }, section: { backgroundColor: "#16624A", borderRadius: 20, padding: 16, marginTop: 18 }, sectionTitle: { color: "#F5D889", fontSize: 15, fontWeight: "800", textAlign: "right", marginBottom: 13, writingDirection: "rtl" }, choiceRow: { flexDirection: arabicRow(), gap: 8 }, timerChoiceRow: { flexDirection: arabicRow(), gap: 7 }, choice: { flex: 1, minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,248,231,0.25)", alignItems: "center", justifyContent: "center" }, choiceActive: { backgroundColor: "#E3B341", borderColor: "#E3B341" }, patternRow: { flexDirection: arabicRow(), gap: 8 }, patternChoice: { flex: 1, minHeight: 76, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,248,231,0.25)", alignItems: "center", justifyContent: "center", gap: 5, paddingVertical: 6 }, patternChoiceActive: { backgroundColor: "#E3B341", borderColor: "#E3B341" }, choiceText: { color: "#D9EEE4", fontWeight: "700", fontSize: 12, writingDirection: "rtl" }, choiceTextActive: { color: "#17211D" }, curveDescription: { color: "#B4D6C7", fontSize: 11, lineHeight: 17, textAlign: "right", marginTop: 10, writingDirection: "rtl" }, personaPicker: { borderTopWidth: 1, borderTopColor: "rgba(255,248,231,0.14)", paddingTop: 13, marginTop: 13 }, personaHeading: { flexDirection: arabicRow(), alignItems: "center", gap: 9 }, personaAvatar: { width: 31, height: 31, borderRadius: 16, backgroundColor: "#E3B341", alignItems: "center", justifyContent: "center" }, personaAvatarText: { color: "#17211D", fontSize: 15, fontWeight: "900", writingDirection: "rtl" }, personaCopy: { flex: 1, alignItems: "flex-end" }, personaSeat: { color: "#FFF8E7", fontSize: 13, fontWeight: "800", textAlign: "right", writingDirection: "rtl" }, personaTitle: { color: "#F5D889", fontSize: 11, fontWeight: "700", textAlign: "right", writingDirection: "rtl", marginTop: 1 }, personaDescription: { color: "#B4D6C7", fontSize: 11, lineHeight: 16, textAlign: "right", marginTop: 6, writingDirection: "rtl" }, personaOptions: { flexDirection: arabicRow(), flexWrap: "wrap", gap: 6, marginTop: 9 }, personaOption: { minWidth: 54, minHeight: 32, paddingHorizontal: 9, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,248,231,0.24)", alignItems: "center", justifyContent: "center" }, personaOptionActive: { backgroundColor: "#E3B341", borderColor: "#E3B341" }, personaOptionText: { color: "#D9EEE4", fontWeight: "700", fontSize: 11, writingDirection: "rtl" }, personaOptionTextActive: { color: "#17211D" }, pressed: { transform: [{ scale: 0.965 }], opacity: 0.82, elevation: 1, shadowOpacity: 0.06, shadowRadius: 1, shadowOffset: { width: 0, height: 1 } }, toggleRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: "rgba(255,248,231,0.12)" }, toggleText: { flex: 1, alignItems: "flex-end" }, toggleLabel: { color: "#FFF8E7", fontSize: 14, fontWeight: "700", textAlign: "right", writingDirection: "rtl" }, toggleDescription: { color: "#B4D6C7", fontSize: 11, textAlign: "right", marginTop: 2, writingDirection: "rtl" }, note: { backgroundColor: "rgba(227,179,65,0.13)", borderWidth: 1, borderColor: "rgba(227,179,65,0.35)", borderRadius: 18, padding: 15, marginTop: 22 }, noteTitle: { color: "#F5D889", fontSize: 15, fontWeight: "800", textAlign: "right", writingDirection: "rtl" }, noteText: { color: "#D9EEE4", fontSize: 13, lineHeight: 20, textAlign: "right", marginTop: 5, writingDirection: "rtl" },
+});
+
+const diagnosticStyles = StyleSheet.create({
+  status: { color: "#F5D889", fontSize: 13, fontWeight: "800", textAlign: "right", marginTop: 12, writingDirection: "rtl" },
+  latest: { color: "#D9EEE4", fontSize: 11, lineHeight: 17, textAlign: "right", marginTop: 8, writingDirection: "rtl" },
+  actions: { flexDirection: arabicRow(), gap: 8, marginTop: 12 },
+  action: { flex: 1, minHeight: 39, borderWidth: 1, borderColor: "rgba(255,248,231,0.28)", borderRadius: 11, alignItems: "center", justifyContent: "center", paddingHorizontal: 6 },
+  actionText: { color: "#FFF8E7", fontSize: 11, fontWeight: "800", writingDirection: "rtl" },
+  destructiveAction: { borderColor: "rgba(245,152,146,0.62)", marginTop: 8, alignSelf: "flex-end", paddingHorizontal: 16 },
+  destructiveText: { color: "#F59892" },
+  notice: { color: "#B4D6C7", fontSize: 11, lineHeight: 17, textAlign: "right", marginTop: 10, writingDirection: "rtl" },
 });

@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type Socket from "react-native-tcp-socket/lib/types/Socket";
 
 import { useGame } from "./game-context";
+import { recordDiagnostic } from "./diagnostics";
 import { chooseAiBid, chooseAiCard, chooseAiTrump } from "./ai";
 import { LOCAL_ROOM_JOIN_TIMEOUT_MS, roomDetailsToQrData, stateForViewer, type RoomConnectionDetails } from "./local-room-utils";
 import { canStartFlexibleRoom, createFlexibleLobby, LOCAL_ROOM_SEATS, partnerSeat, toNetworkPlayerConfig, virtualMember } from "./local-room-plan";
@@ -139,8 +140,10 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
     const hostName = name.trim() || "صاحب الغرفة";
     closingRoomRef.current = false;
     if (!nativeSupported) {
-      setError("استضافة الغرفة تحتاج نسخة أصلية على هاتف Android أو iPhone، وليست معاينة الويب.");
+      const message = "استضافة الغرفة تحتاج نسخة أصلية على هاتف Android أو iPhone، وليست معاينة الويب.";
+      setError(message);
       setStatus("error");
+      void recordDiagnostic({ kind: "network", message });
       return;
     }
     setError(null);
@@ -158,7 +161,11 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
       const host = new LocalRoomHost({
         onConnect: () => undefined,
         onClose: updateHostMembersForDisconnect,
-        onError: (message) => setError(`تعذر الاتصال المحلي: ${message}`),
+        onError: (message) => {
+          const error = `تعذر الاتصال المحلي: ${message}`;
+          setError(error);
+          void recordDiagnostic({ kind: "network", message: error });
+        },
         onMessage: (message, socket) => {
           const detailsNow = roomRef.current;
           if (!detailsNow) return;
@@ -195,6 +202,7 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
       const message = cause instanceof Error ? cause.message : "تعذر إنشاء الغرفة المحلية.";
       setStatus("error");
       setError(message);
+      void recordDiagnostic({ kind: "network", message, stack: cause instanceof Error ? cause.stack : undefined });
       setRole(null);
       setRoomDetails(null);
       roomRef.current = null;
@@ -206,8 +214,10 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
     closingRoomRef.current = false;
     clearJoinTimeout();
     if (!nativeSupported) {
-      setError("الانضمام إلى غرفة يحتاج نسخة أصلية على هاتف Android أو iPhone.");
+      const message = "الانضمام إلى غرفة يحتاج نسخة أصلية على هاتف Android أو iPhone.";
+      setError(message);
       setStatus("error");
+      void recordDiagnostic({ kind: "network", message });
       return;
     }
     setError(null);
@@ -226,15 +236,19 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
         onClose: () => {
           clearJoinTimeout();
           if (!closingRoomRef.current && !rejectedByHost && !timedOut) {
+            const message = "انقطع الاتصال بمضيف الغرفة.";
             setStatus("error");
-            setError("انقطع الاتصال بمضيف الغرفة.");
+            setError(message);
+            void recordDiagnostic({ kind: "network", message });
           }
         },
         onError: (message) => {
           clearJoinTimeout();
           if (timedOut) return;
+          const error = `تعذر الاتصال بالمضيف: ${message}`;
           setStatus("error");
-          setError(`تعذر الاتصال بالمضيف: ${message}`);
+          setError(error);
+          void recordDiagnostic({ kind: "network", message: error });
         },
         onMessage: (message) => {
           if (message.type === "error" && typeof message.message === "string") {
@@ -242,6 +256,7 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
             rejectedByHost = true;
             setStatus("error");
             setError(message.message);
+            void recordDiagnostic({ kind: "network", message: message.message });
             return;
           }
           if (message.type === "welcome" && typeof message.seat === "number" && SEATS.includes(message.seat as Seat)) {
@@ -268,7 +283,9 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
         client.disconnect();
         if (clientRef.current === client) clientRef.current = null;
         setStatus("error");
-        setError("انتهت مهلة الاتصال. تأكد من بقاء جهاز المضيف مفتوحًا وأن الأجهزة على الشبكة المحلية نفسها، ثم حاول مجددًا.");
+        const message = "انتهت مهلة الاتصال. تأكد من بقاء جهاز المضيف مفتوحًا وأن الأجهزة على الشبكة المحلية نفسها، ثم حاول مجددًا.";
+        setError(message);
+        void recordDiagnostic({ kind: "network", message });
         clearJoinTimeout();
       }, LOCAL_ROOM_JOIN_TIMEOUT_MS);
       await client.connect(details.host, details.port);
@@ -276,8 +293,10 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
     } catch (cause) {
       clearJoinTimeout();
       if (!timedOut) {
+        const message = cause instanceof Error ? cause.message : "تعذر الانضمام إلى الغرفة.";
         setStatus("error");
-        setError(cause instanceof Error ? cause.message : "تعذر الانضمام إلى الغرفة.");
+        setError(message);
+        void recordDiagnostic({ kind: "network", message, stack: cause instanceof Error ? cause.stack : undefined });
       }
       clientRef.current?.disconnect();
       clientRef.current = null;
@@ -300,7 +319,9 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
     try {
       clientRef.current?.send(message);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "تعذر إرسال الأمر إلى المضيف.");
+      const error = cause instanceof Error ? cause.message : "تعذر إرسال الأمر إلى المضيف.";
+      setError(error);
+      void recordDiagnostic({ kind: "network", message: error, stack: cause instanceof Error ? cause.stack : undefined });
     }
   }, []);
 

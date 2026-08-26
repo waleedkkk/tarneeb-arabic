@@ -9,10 +9,13 @@ import { ThemeProvider } from "@/lib/theme-provider";
 import { GameProvider } from "@/lib/tarneeb/game-context";
 import { LocalRoomProvider } from "@/lib/tarneeb/local-room-context";
 import { enableRTL } from "@/lib/rtl";
+import { DiagnosticErrorBoundary } from "@/components/diagnostic-error-boundary";
+import { installGlobalDiagnosticHandler } from "@/lib/tarneeb/diagnostics";
 
 // تفعيل RTL على مستوى native فور تحميل الملف، قبل أي رندر.
 // في APK يأخذ React Native الاتجاه من I18nManager لا من dir="rtl" في الويب.
 const rtlWasJustEnabled = enableRTL();
+installGlobalDiagnosticHandler();
 
 export default function RootLayout() {
   // عند أول تشغيل بعد التثبيت أو بعد تفعيل RTL: إعادة تشغيل كاملة
@@ -38,7 +41,7 @@ export default function RootLayout() {
   }, []);
   return (
     <GestureHandlerRootView style={styles.gestureRoot}>
-      <SafeAreaProvider>
+      <DiagnosticErrorBoundary><SafeAreaProvider>
         <ThemeProvider>
           <GameProvider>
             <LocalRoomProvider>
@@ -49,7 +52,7 @@ export default function RootLayout() {
             </LocalRoomProvider>
           </GameProvider>
         </ThemeProvider>
-      </SafeAreaProvider>
+      </SafeAreaProvider></DiagnosticErrorBoundary>
     </GestureHandlerRootView>
   );
 }
