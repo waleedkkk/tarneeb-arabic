@@ -7,8 +7,8 @@ export interface FanCardPosition {
   zIndex: number;
 }
 
-const STANDARD_CARD_FOOTPRINT = 64;
-const COMPACT_CARD_FOOTPRINT = 52;
+const STANDARD_CARD_FOOTPRINT = 72;
+const COMPACT_CARD_FOOTPRINT = 58;
 const MAX_FAN_WIDTH = 340;
 
 export interface ResponsiveFanMetrics {
@@ -20,8 +20,8 @@ export interface ResponsiveFanMetrics {
 
 /**
  * Keeps the complete hand within narrow phone screens. Compact cards retain a
- * 48px visual width plus their touch margin, while regular cards are used when
- * there is room for the full 60px card treatment.
+ * 54px visual width plus their touch margin, while regular cards are used when
+ * there is room for the full 68px card treatment.
  */
 export function getResponsiveFanMetrics(viewportWidth: number, compactLayout = false): ResponsiveFanMetrics {
   const compact = compactLayout || viewportWidth < 344;
@@ -32,7 +32,7 @@ export function getResponsiveFanMetrics(viewportWidth: number, compactLayout = f
 
   return {
     fanWidth,
-    fanHeight: compact ? 88 : 112,
+    fanHeight: compact ? 100 : 126,
     cardFootprint,
     compact,
   };

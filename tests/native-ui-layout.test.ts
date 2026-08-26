@@ -29,7 +29,7 @@ describe("native Android table layout", () => {
     expect(layout.topSafeFallback).toBe(0);
     expect(layout.compact).toBe(true);
     expect(layout.tableMaxHeight + layout.reservedHeight).toBeLessThanOrEqual(viewport.height);
-    expect(layout.handAreaHeight).toBe(124);
+    expect(layout.handAreaHeight).toBe(144);
   });
 
   it("uses controlled LTR geometry with explicit RTL rows, preventing native double mirroring", () => {
