@@ -1,5 +1,5 @@
 import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import type { SoundProfile } from "./types";
 
 const shuffleSource = require("../../assets/sounds/card-shuffle.mp3");
@@ -30,10 +30,10 @@ export function useGameSounds(enabled: boolean, profile: SoundProfile) {
     setAudioModeAsync({ playsInSilentMode: true }).catch(() => undefined);
   }, []);
 
-  return {
-    playShuffle: useCallback(() => replay(shufflePlayer, enabled, profile), [enabled, profile, shufflePlayer]),
-    playCard: useCallback(() => replay(cardPlayer, enabled, profile), [enabled, profile, cardPlayer]),
-    playTrick: useCallback(() => replay(trickPlayer, enabled, profile), [enabled, profile, trickPlayer]),
-    playTimerAlert: useCallback(() => replay(timerAlertPlayer, enabled, profile), [enabled, profile, timerAlertPlayer]),
-  };
+  const playShuffle = useCallback(() => replay(shufflePlayer, enabled, profile), [enabled, profile, shufflePlayer]);
+  const playCard = useCallback(() => replay(cardPlayer, enabled, profile), [cardPlayer, enabled, profile]);
+  const playTrick = useCallback(() => replay(trickPlayer, enabled, profile), [enabled, profile, trickPlayer]);
+  const playTimerAlert = useCallback(() => replay(timerAlertPlayer, enabled, profile), [enabled, profile, timerAlertPlayer]);
+
+  return useMemo(() => ({ playShuffle, playCard, playTrick, playTimerAlert }), [playCard, playShuffle, playTimerAlert, playTrick]);
 }

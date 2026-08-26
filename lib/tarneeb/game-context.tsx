@@ -78,10 +78,17 @@ interface GameContextValue {
   nextNetworkTrick: () => void;
   nextNetworkRound: () => void;
   applyNetworkState: (state: MatchState) => void;
-  turnTimer: TurnTimerState;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
+const TurnTimerContext = createContext<TurnTimerState>({ durationSeconds: 0, remainingSeconds: 0, isActive: false, isExpired: false });
+
+function sameTurnTimer(left: TurnTimerState, right: TurnTimerState) {
+  return left.durationSeconds === right.durationSeconds
+    && left.remainingSeconds === right.remainingSeconds
+    && left.isActive === right.isActive
+    && left.isExpired === right.isExpired;
+}
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, createHomeState);
@@ -169,7 +176,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const durationSeconds = settings.turnTimerSeconds;
     if (!humanSoloTurn || durationSeconds === 0) {
-      setTurnTimer({ durationSeconds, remainingSeconds: 0, isActive: false, isExpired: false });
+      const nextTimer = { durationSeconds, remainingSeconds: 0, isActive: false, isExpired: false };
+      setTurnTimer((current) => sameTurnTimer(current, nextTimer) ? current : nextTimer);
       return;
     }
 
@@ -182,16 +190,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         alertPlayed = true;
         sounds.playTimerAlert();
       }
-      setTurnTimer({
+      const nextTimer = {
         durationSeconds,
         remainingSeconds,
         isActive: remainingSeconds > 0,
         isExpired: remainingSeconds === 0,
-      });
+      };
+      setTurnTimer((current) => sameTurnTimer(current, nextTimer) ? current : nextTimer);
     };
 
     updateRemainingTime();
-    const interval = setInterval(updateRemainingTime, 500);
+    const interval = setInterval(updateRemainingTime, 1000);
     return () => clearInterval(interval);
   }, [humanSoloTurn, settings.turnTimerSeconds, sounds.playTimerAlert, timerTurnKey]);
 
@@ -297,16 +306,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         dispatch({ type: "NEXT_NETWORK_ROUND" });
       },
       applyNetworkState: (nextState) => dispatch({ type: "NETWORK_STATE", state: nextState }),
-      turnTimer,
     }),
-    [feedback, settings, sounds, state, turnTimer],
+    [feedback, settings, sounds, state],
   );
 
-  return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
+  return <GameContext.Provider value={value}><TurnTimerContext.Provider value={turnTimer}>{children}</TurnTimerContext.Provider></GameContext.Provider>;
 }
 
 export function useGame() {
   const context = useContext(GameContext);
   if (!context) throw new Error("يجب استخدام useGame داخل GameProvider");
   return context;
+}
+
+export function useTurnTimer() {
+  return useContext(TurnTimerContext);
 }

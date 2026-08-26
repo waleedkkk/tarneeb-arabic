@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { StyleSheet, useWindowDimensions, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
+import Animated, { Easing, runOnJS, type SharedValue, useAnimatedStyle, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
 
 import { PlayingCard } from "./card";
 import { getBalancedFanCardPosition, getCardDragDropThreshold, getFanEdgeHitSlop, getResponsiveFanMetrics } from "@/lib/tarneeb/card-fan-layout";
@@ -19,12 +19,13 @@ interface CurvedCardHandProps {
   dealFlip?: boolean;
   compactLayout?: boolean;
   dragEnabled?: boolean;
+  dragProgress?: SharedValue<number>;
   onCardDragStateChange?: (dragging: boolean) => void;
   onCardPress?: (cardId: string) => void;
 }
 
 /** A shared, balanced card fan used anywhere the player reviews their hand. */
-export function CurvedCardHand({
+export const CurvedCardHand = memo(function CurvedCardHand({
   cards,
   accessibilityLabel,
   disabledCardIds = [],
@@ -36,6 +37,7 @@ export function CurvedCardHand({
   dealFlip = true,
   compactLayout = false,
   dragEnabled = false,
+  dragProgress,
   onCardDragStateChange,
   onCardPress,
 }: CurvedCardHandProps) {
@@ -57,17 +59,18 @@ export function CurvedCardHand({
           curveStrength,
         );
         const disabled = disabledCardIds.includes(card.id);
-        return <FanCardSlot key={card.id} card={card} compact={metrics.compact} disabled={disabled} dragEnabled={dragEnabled} entranceDelay={index * entranceStep * (animationSpeed === "هادئة" ? 1.25 : animationSpeed === "سريعة" ? 0.72 : 1)} cardBackPattern={cardBackPattern} cardFaceTheme={cardFaceTheme} animationSpeed={animationSpeed} dealFlip={dealFlip} edgeFeedback={metrics.compact && (index === 0 || index === cards.length - 1)} hitSlop={getFanEdgeHitSlop(index, cards.length, metrics.compact)} position={position} onDragStateChange={onCardDragStateChange} onPlay={onCardPress ? () => onCardPress(card.id) : undefined} />;
+        return <FanCardSlot key={card.id} card={card} compact={metrics.compact} disabled={disabled} dragEnabled={dragEnabled} dragProgress={dragProgress} entranceDelay={index * entranceStep * (animationSpeed === "هادئة" ? 1.25 : animationSpeed === "سريعة" ? 0.72 : 1)} cardBackPattern={cardBackPattern} cardFaceTheme={cardFaceTheme} animationSpeed={animationSpeed} dealFlip={dealFlip} edgeFeedback={metrics.compact && (index === 0 || index === cards.length - 1)} hitSlop={getFanEdgeHitSlop(index, cards.length, metrics.compact)} position={position} onDragStateChange={onCardDragStateChange} onPlay={onCardPress ? () => onCardPress(card.id) : undefined} />;
       })}
     </View>
   );
-}
+});
 
-function FanCardSlot({ card, compact, disabled, dragEnabled, entranceDelay, cardBackPattern, cardFaceTheme, animationSpeed, dealFlip, edgeFeedback, hitSlop, position, onDragStateChange, onPlay }: {
+const FanCardSlot = memo(function FanCardSlot({ card, compact, disabled, dragEnabled, dragProgress, entranceDelay, cardBackPattern, cardFaceTheme, animationSpeed, dealFlip, edgeFeedback, hitSlop, position, onDragStateChange, onPlay }: {
   card: Card;
   compact: boolean;
   disabled: boolean;
   dragEnabled: boolean;
+  dragProgress?: SharedValue<number>;
   entranceDelay: number;
   cardBackPattern: CardBackPattern;
   cardFaceTheme: CardFaceTheme;
@@ -118,7 +121,8 @@ function FanCardSlot({ card, compact, disabled, dragEnabled, entranceDelay, card
     .activeOffsetY([-8, 8])
     .onBegin(() => {
       dragLift.value = withTiming(1, { duration: 90 * motion, easing: Easing.out(Easing.cubic) });
-      runOnJS(notifyDragState)(true);
+      if (dragProgress) dragProgress.value = withTiming(1, { duration: 75, easing: Easing.out(Easing.cubic) });
+      if (onDragStateChange) runOnJS(notifyDragState)(true);
     })
     .onUpdate((event) => {
       dragX.value = event.translationX;
@@ -139,10 +143,12 @@ function FanCardSlot({ card, compact, disabled, dragEnabled, entranceDelay, card
         dragY.value = withTiming(0, { duration: 170 * motion, easing: Easing.out(Easing.cubic) });
         dragLift.value = withTiming(0, { duration: 130 * motion, easing: Easing.out(Easing.cubic) });
       }
-      runOnJS(notifyDragState)(false);
+      if (dragProgress) dragProgress.value = withTiming(0, { duration: 110, easing: Easing.out(Easing.cubic) });
+      if (onDragStateChange) runOnJS(notifyDragState)(false);
     })
     .onFinalize(() => {
-      runOnJS(notifyDragState)(false);
+      if (dragProgress) dragProgress.value = withTiming(0, { duration: 110, easing: Easing.out(Easing.cubic) });
+      if (onDragStateChange) runOnJS(notifyDragState)(false);
     });
   // يُدار النقر والسحب عبر GestureDetector واحد. لا نمرر onPress إلى
   // PlayingCard كي لا تختلط Pressable الداخلية مع RNGH على Android الحقيقي.
@@ -167,7 +173,7 @@ function FanCardSlot({ card, compact, disabled, dragEnabled, entranceDelay, card
       </GestureDetector>
     </Animated.View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   fan: { position: "relative", alignSelf: "center" },

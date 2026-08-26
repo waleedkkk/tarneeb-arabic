@@ -11,7 +11,7 @@ describe("مؤثرات صوت اللعبة", () => {
   it("يربط حسم اللمّة بملف مستقل وقابل للتشغيل عن صوت رمي البطاقة", () => {
     expect(soundHook).toContain('const trickSource = require("../../assets/sounds/trick-win.mp3")');
     expect(soundHook).toContain('const cardSource = require("../../assets/sounds/card-place.mp3")');
-    expect(soundHook).toContain("playTrick: useCallback(() => replay(trickPlayer, enabled, profile)");
+    expect(soundHook).toContain("const playTrick = useCallback(() => replay(trickPlayer, enabled, profile)");
     expect(existsSync(trickSound)).toBe(true);
     expect(statSync(trickSound).size).toBeGreaterThan(1024);
     expect(trickSound).not.toBe(cardSound);

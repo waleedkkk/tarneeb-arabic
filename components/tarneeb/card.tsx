@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, type Insets, View } from "react-native";
 import { cardLabel, rankLabel, suitSymbol } from "@/lib/tarneeb/engine";
 import type { AnimationSpeed, Card as CardType, CardBackPattern, CardFaceTheme } from "@/lib/tarneeb/types";
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from "react-native-reanimated";
 
 interface CardProps {
@@ -21,7 +21,7 @@ interface CardProps {
   animationSpeed?: AnimationSpeed;
 }
 
-export function PlayingCard({ card, onPress, pressSignal, disabled = false, selected = false, compact = false, hitSlop, edgeFeedback = false, entranceDelay = 0, dealFlip = false, cardBackPattern = "royal", cardFaceTheme = "ivory", animationSpeed = "متوازنة" }: CardProps) {
+export const PlayingCard = memo(function PlayingCard({ card, onPress, pressSignal, disabled = false, selected = false, compact = false, hitSlop, edgeFeedback = false, entranceDelay = 0, dealFlip = false, cardBackPattern = "royal", cardFaceTheme = "ivory", animationSpeed = "متوازنة" }: CardProps) {
   const red = card.suit === "hearts" || card.suit === "diamonds";
   const faceTheme = CARD_FACE_THEMES[cardFaceTheme];
   const motion = animationSpeed === "هادئة" ? 1.28 : animationSpeed === "سريعة" ? 0.72 : 1;
@@ -101,9 +101,9 @@ export function PlayingCard({ card, onPress, pressSignal, disabled = false, sele
       {content}
     </Pressable>
   );
-}
+});
 
-export function CardBack({ compact = false, pattern = "royal", size = "seat" }: { compact?: boolean; pattern?: CardBackPattern; size?: "seat" | "card" }) {
+export const CardBack = memo(function CardBack({ compact = false, pattern = "royal", size = "seat" }: { compact?: boolean; pattern?: CardBackPattern; size?: "seat" | "card" }) {
   const theme = CARD_BACK_THEMES[pattern];
   return (
     <View style={[styles.back, compact && styles.compactBack, size === "card" && styles.fullCardBack, size === "card" && compact && styles.compactFullCardBack]}>
@@ -119,7 +119,7 @@ export function CardBack({ compact = false, pattern = "royal", size = "seat" }: 
       </View>
     </View>
   );
-}
+});
 
 function BackPattern({ pattern, colorStyle }: { pattern: CardBackPattern; colorStyle: object }) {
   if (pattern === "navy") {

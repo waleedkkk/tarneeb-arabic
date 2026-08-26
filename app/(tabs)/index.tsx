@@ -1,6 +1,6 @@
 import { arabicRow } from "@/lib/rtl-style";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useGame } from "@/lib/tarneeb/game-context";
 import { useLocalRoom } from "@/lib/tarneeb/local-room-context";
@@ -19,6 +19,14 @@ export default function GameScreen() {
   const { state } = game;
   const [roomSheetVisible, setRoomSheetVisible] = useState(false);
   const isNetworkMatch = state.matchMode === "localRoom";
+  const tableAction = useMemo(() => <View style={styles.tableActionRow}><MatchLogButton compact /><MatchActions /></View>, []);
+  const handleCardPress = useCallback((cardId: string) => {
+    const card = state.players[0].hand.find((item) => item.id === cardId);
+    if (card && legalCards(state.players[0].hand, state.trick).some((item) => item.id === card.id)) {
+      if (isNetworkMatch) room.requestCard(card.id);
+      else game.playHumanCard(card);
+    }
+  }, [game, isNetworkMatch, room, state]);
 
   if (isNetworkMatch && room.status === "error") return <ConnectionLostScreen message={room.error ?? "تعذر متابعة الغرفة المحلية."} onReturn={() => { void room.leaveRoom(); game.exitMatch(); }} />;
   if (state.phase === "home") return <><Home onStart={game.startMatch} onLocal={() => setRoomSheetVisible(true)} /><LocalRoomSheet visible={roomSheetVisible} onClose={() => setRoomSheetVisible(false)} /></>;
@@ -28,13 +36,7 @@ export default function GameScreen() {
 
   return (
     <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safe}>
-      <GameTable action={<View style={styles.tableActionRow}><MatchLogButton compact /><MatchActions /></View>} fanCurve={game.settings.cardFanCurve} cardBackPattern={game.settings.cardBackPattern} cardFaceTheme={game.settings.cardFaceTheme} tableTheme={game.settings.tableTheme} animationSpeed={game.settings.animationSpeed} tableTextSize={game.settings.tableTextSize} opponentCardDensity={game.settings.opponentCardDensity} showOpponentProfileCards={game.settings.showOpponentProfileCards} turnTimer={game.turnTimer} state={state} onCardPress={(cardId) => {
-        const card = state.players[0].hand.find((item) => item.id === cardId);
-        if (card && legalCards(state.players[0].hand, state.trick).some((item) => item.id === card.id)) {
-          if (isNetworkMatch) room.requestCard(card.id);
-          else game.playHumanCard(card);
-        }
-      }} />
+      <GameTable action={tableAction} fanCurve={game.settings.cardFanCurve} cardBackPattern={game.settings.cardBackPattern} cardFaceTheme={game.settings.cardFaceTheme} tableTheme={game.settings.tableTheme} animationSpeed={game.settings.animationSpeed} tableTextSize={game.settings.tableTextSize} opponentCardDensity={game.settings.opponentCardDensity} showOpponentProfileCards={game.settings.showOpponentProfileCards} state={state} onCardPress={handleCardPress} />
       {state.phase === "trickResult" && <TrickResultOverlay state={state} onNext={isNetworkMatch ? room.requestNextTrick : game.nextTrick} canAdvance={!isNetworkMatch || room.role === "host"} />}
     </SafeAreaView>
   );

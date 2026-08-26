@@ -5,12 +5,13 @@ import { cardLabel, legalCards, suitName, suitSymbol } from "@/lib/tarneeb/engin
 import { getAiPersona } from "@/lib/tarneeb/personas";
 import { getNativeTableLayout } from "@/lib/tarneeb/native-ui-layout";
 import { getOpponentCardFanLayout } from "@/lib/tarneeb/opponent-card-fan-layout";
-import type { AnimationSpeed, CardBackPattern, CardFaceTheme, CardFanCurve, MatchState, OpponentCardDensity, TableTextSize, TableTheme, TurnTimerSeconds } from "@/lib/tarneeb/types";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useTurnTimer } from "@/lib/tarneeb/game-context";
+import type { AnimationSpeed, CardBackPattern, CardFaceTheme, CardFanCurve, MatchState, OpponentCardDensity, TableTextSize, TableTheme } from "@/lib/tarneeb/types";
+import { memo, useEffect, useRef, useState, type ReactNode } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { Easing, FadeIn, FadeOut, LinearTransition, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, FadeOut, LinearTransition, type SharedValue, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from "react-native-reanimated";
 
-export function GameTable({ state, onCardPress, action, fanCurve, cardBackPattern, cardFaceTheme, tableTheme, animationSpeed, tableTextSize, opponentCardDensity, showOpponentProfileCards, turnTimer }: { state: MatchState; onCardPress: (cardId: string) => void; action?: ReactNode; fanCurve: CardFanCurve; cardBackPattern: CardBackPattern; cardFaceTheme: CardFaceTheme; tableTheme: TableTheme; animationSpeed: AnimationSpeed; tableTextSize: TableTextSize; opponentCardDensity: OpponentCardDensity; showOpponentProfileCards: boolean; turnTimer: { durationSeconds: TurnTimerSeconds; remainingSeconds: number; isActive: boolean; isExpired: boolean } }) {
+export const GameTable = memo(function GameTable({ state, onCardPress, action, fanCurve, cardBackPattern, cardFaceTheme, tableTheme, animationSpeed, tableTextSize, opponentCardDensity, showOpponentProfileCards }: { state: MatchState; onCardPress: (cardId: string) => void; action?: ReactNode; fanCurve: CardFanCurve; cardBackPattern: CardBackPattern; cardFaceTheme: CardFaceTheme; tableTheme: TableTheme; animationSpeed: AnimationSpeed; tableTextSize: TableTextSize; opponentCardDensity: OpponentCardDensity; showOpponentProfileCards: boolean }) {
   const { width, height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [contentHeight, setContentHeight] = useState(0);
@@ -21,7 +22,7 @@ export function GameTable({ state, onCardPress, action, fanCurve, cardBackPatter
   const trump = state.bidding.trumpSuit;
   const bidder = state.bidding.highestBidder === null ? null : state.players[state.bidding.highestBidder];
   const hand = state.players[0].hand;
-  const [draggingCard, setDraggingCard] = useState(false);
+  const dragProgress = useSharedValue(0);
   const [selectedPersona, setSelectedPersona] = useState<ReturnType<typeof getAiPersona> | null>(null);
   const largeText = tableTextSize === "large";
   const theme = TABLE_THEMES[tableTheme];
@@ -59,11 +60,7 @@ export function GameTable({ state, onCardPress, action, fanCurve, cardBackPatter
         <PlayerSeat name={state.players[1].name} persona={state.players[1].personaId ? getAiPersona(state.players[1].personaId) : undefined} cards={state.players[1].handCount} position="right" active={currentSeat(state) === 1} cardBackPattern={cardBackPattern} density={opponentCardDensity} largeText={largeText} showProfileCard={showOpponentProfileCards} onPersonaPress={setSelectedPersona} />
 
         <View style={styles.trickArea}>
-          {humanTurn && (
-            <View pointerEvents="none" style={[styles.dropTarget, draggingCard && styles.dropTargetActive]}>
-              <Text style={[styles.dropTargetText, draggingCard && styles.dropTargetTextActive]}>{draggingCard ? "أفلت الورقة هنا" : "اسحب ورقة إلى الطاولة"}</Text>
-            </View>
-          )}
+          <DropTarget visible={humanTurn} progress={dragProgress} />
           {cardBySeat[2] && <TrickCard card={cardBySeat[2]} seat={2} cardFaceTheme={cardFaceTheme} animationSpeed={animationSpeed} collectingWinner={state.phase === "trickResult" ? state.lastTrick?.winnerId ?? null : null} />}
           {cardBySeat[3] && <TrickCard card={cardBySeat[3]} seat={3} cardFaceTheme={cardFaceTheme} animationSpeed={animationSpeed} collectingWinner={state.phase === "trickResult" ? state.lastTrick?.winnerId ?? null : null} />}
           {cardBySeat[1] && <TrickCard card={cardBySeat[1]} seat={1} cardFaceTheme={cardFaceTheme} animationSpeed={animationSpeed} collectingWinner={state.phase === "trickResult" ? state.lastTrick?.winnerId ?? null : null} />}
@@ -73,22 +70,36 @@ export function GameTable({ state, onCardPress, action, fanCurve, cardBackPatter
       </View>
 
       <View style={[styles.handArea, { height: nativeLayout.handAreaHeight, marginTop: nativeLayout.handTopMargin }]}> 
-        <View style={styles.handHeader}><Text style={[styles.handTitle, largeText && styles.handTitleLarge]}>أوراقك</Text><View style={styles.handMeta}>{turnTimer.durationSeconds > 0 && (turnTimer.isActive || turnTimer.isExpired) && <TurnTimerBadge timer={turnTimer} />}<Text style={[styles.handHint, largeText && styles.handHintLarge]}>{humanTurn ? "اسحب ورقة للطاولة أو اضغط عليها" : "دور الخصم"}</Text></View></View>
-        <CurvedCardHand cards={hand} accessibilityLabel="يدك مرتبة ضمن قوس متساوٍ" compactLayout={nativeLayout.compact} dragEnabled={humanTurn} entranceStep={26} curveStrength={fanCurve} cardBackPattern={cardBackPattern} cardFaceTheme={cardFaceTheme} animationSpeed={animationSpeed} dealFlip={false} disabledCardIds={!humanTurn ? hand.map((card) => card.id) : hand.filter((card) => !playable.includes(card.id)).map((card) => card.id)} onCardDragStateChange={setDraggingCard} onCardPress={onCardPress} />
+        <View style={styles.handHeader}><Text style={[styles.handTitle, largeText && styles.handTitleLarge]}>أوراقك</Text><View style={styles.handMeta}><TurnTimerBadge /><Text style={[styles.handHint, largeText && styles.handHintLarge]}>{humanTurn ? "اسحب ورقة للطاولة أو اضغط عليها" : "دور الخصم"}</Text></View></View>
+        <CurvedCardHand cards={hand} accessibilityLabel="يدك مرتبة ضمن قوس متساوٍ" compactLayout={nativeLayout.compact} dragEnabled={humanTurn} entranceStep={26} curveStrength={fanCurve} cardBackPattern={cardBackPattern} cardFaceTheme={cardFaceTheme} animationSpeed={animationSpeed} dealFlip={false} disabledCardIds={!humanTurn ? hand.map((card) => card.id) : hand.filter((card) => !playable.includes(card.id)).map((card) => card.id)} dragProgress={dragProgress} onCardPress={onCardPress} />
       </View>
       <PersonaInfoCard persona={showOpponentProfileCards ? selectedPersona : null} onClose={() => setSelectedPersona(null)} />
     </View>
   );
-}
+});
 
-function TurnTimerBadge({ timer }: { timer: { durationSeconds: TurnTimerSeconds; remainingSeconds: number; isActive: boolean; isExpired: boolean } }) {
+function TurnTimerBadge() {
+  const timer = useTurnTimer();
+  if (timer.durationSeconds === 0 || (!timer.isActive && !timer.isExpired)) return null;
   const isUrgent = timer.isExpired || timer.remainingSeconds <= 5;
   const isWarning = !isUrgent && timer.remainingSeconds <= 10;
-  const progress = timer.durationSeconds === 0 ? 0 : (timer.remainingSeconds / timer.durationSeconds) * 100;
+  const progress = (timer.remainingSeconds / timer.durationSeconds) * 100;
   return <View style={[styles.timerBadge, isWarning && styles.timerBadgeWarning, isUrgent && styles.timerBadgeUrgent]}><Text style={styles.timerLabel}>{timer.isExpired ? "انتهى الوقت" : `وقت الدور ${timer.remainingSeconds} ث`}</Text><View style={styles.timerTrack}><View style={[styles.timerFill, isWarning && styles.timerFillWarning, isUrgent && styles.timerFillUrgent, { width: `${progress}%` }]} /></View></View>;
 }
 
-function TrickCard({ card, seat, cardFaceTheme, animationSpeed, collectingWinner }: { card: MatchState["trick"]["plays"][number]["card"]; seat: 0 | 1 | 2 | 3; cardFaceTheme: CardFaceTheme; animationSpeed: AnimationSpeed; collectingWinner: 0 | 1 | 2 | 3 | null }) {
+function DropTarget({ visible, progress }: { visible: boolean; progress: SharedValue<number> }) {
+  const targetStyle = useAnimatedStyle(() => ({
+    borderColor: progress.value > 0.01 ? "#E3B341" : "rgba(217,238,228,0.45)",
+    backgroundColor: progress.value > 0.01 ? "rgba(227,179,65,0.18)" : "rgba(14,59,46,0.18)",
+    transform: [{ scale: 1 + progress.value * 0.04 }],
+  }));
+  const idleTextStyle = useAnimatedStyle(() => ({ opacity: 1 - progress.value }));
+  const activeTextStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
+  if (!visible) return null;
+  return <Animated.View pointerEvents="none" style={[styles.dropTarget, targetStyle]}><Animated.Text style={[styles.dropTargetText, styles.dropTargetIdleText, idleTextStyle]}>اسحب ورقة إلى الطاولة</Animated.Text><Animated.Text style={[styles.dropTargetText, styles.dropTargetTextActive, styles.dropTargetActiveText, activeTextStyle]}>أفلت الورقة هنا</Animated.Text></Animated.View>;
+}
+
+const TrickCard = memo(function TrickCard({ card, seat, cardFaceTheme, animationSpeed, collectingWinner }: { card: MatchState["trick"]["plays"][number]["card"]; seat: 0 | 1 | 2 | 3; cardFaceTheme: CardFaceTheme; animationSpeed: AnimationSpeed; collectingWinner: 0 | 1 | 2 | 3 | null }) {
   const progress = useSharedValue(0);
   const gather = useSharedValue(0);
   const sweep = useSharedValue(0);
@@ -121,7 +132,7 @@ function TrickCard({ card, seat, cardFaceTheme, animationSpeed, collectingWinner
   }));
 
   return <Animated.View style={[styles.playSlot, styles[travel.slot], travelStyle]}><PlayingCard card={card} compact cardFaceTheme={cardFaceTheme} animationSpeed={animationSpeed} /></Animated.View>;
-}
+});
 
 const TRICK_TRAVEL = {
   0: { x: 0, y: 112, rotation: "0deg", slot: "playBottom" },
@@ -155,7 +166,7 @@ function currentSeat(state: MatchState) {
   return state.trick.plays.length === 0 ? state.trick.leaderId : ((state.trick.plays.at(-1)!.playerId + 1) % 4);
 }
 
-function PlayerSeat({ name, persona, cards, position, active, cardBackPattern, density, largeText, showProfileCard, onPersonaPress }: { name: string; persona?: ReturnType<typeof getAiPersona>; cards: number; position: "top" | "left" | "right"; active: boolean; cardBackPattern: CardBackPattern; density: OpponentCardDensity; largeText: boolean; showProfileCard: boolean; onPersonaPress: (persona: ReturnType<typeof getAiPersona>) => void }) {
+const PlayerSeat = memo(function PlayerSeat({ name, persona, cards, position, active, cardBackPattern, density, largeText, showProfileCard, onPersonaPress }: { name: string; persona?: ReturnType<typeof getAiPersona>; cards: number; position: "top" | "left" | "right"; active: boolean; cardBackPattern: CardBackPattern; density: OpponentCardDensity; largeText: boolean; showProfileCard: boolean; onPersonaPress: (persona: ReturnType<typeof getAiPersona>) => void }) {
   const isSideSeat = position !== "top";
   const cardRotation = position === "left" ? "90deg" : "-90deg";
   const fan = getOpponentCardFanLayout(cards, position, density);
@@ -200,7 +211,7 @@ function PlayerSeat({ name, persona, cards, position, active, cardBackPattern, d
       </View>
     </View>
   );
-}
+});
 
 function PersonaInfoCard({ persona, onClose }: { persona: ReturnType<typeof getAiPersona> | null; onClose: () => void }) {
   return (
@@ -298,7 +309,7 @@ const styles = StyleSheet.create({
   trickArea: { position: "absolute", width: 190, height: 205, alignSelf: "center", top: "28%", left: "50%", transform: [{ translateX: -95 }], borderRadius: 95, borderWidth: 1, borderColor: "rgba(255,248,231,0.18)" },
   dropTarget: { position: "absolute", top: 64, left: 20, right: 20, height: 78, borderRadius: 18, borderWidth: 1, borderStyle: "dashed", borderColor: "rgba(217,238,228,0.45)", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(14,59,46,0.18)" },
   dropTargetActive: { borderColor: "#E3B341", backgroundColor: "rgba(227,179,65,0.18)", transform: [{ scale: 1.04 }] },
-  dropTargetText: { color: "#B4D6C7", fontSize: 12, fontWeight: "700", writingDirection: "rtl" },
+  dropTargetText: { color: "#B4D6C7", fontSize: 12, fontWeight: "700", writingDirection: "rtl" }, dropTargetIdleText: { position: "absolute" }, dropTargetActiveText: { position: "absolute" },
   dropTargetTextActive: { color: "#FFF8E7" },
   playSlot: { position: "absolute" },
   playTop: { top: 8, alignSelf: "center" },
