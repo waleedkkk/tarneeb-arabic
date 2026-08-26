@@ -4,7 +4,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type Socket from "react-native-tcp-socket/lib/types/Socket";
 
 import { useGame } from "./game-context";
+import { chooseAiBid, chooseAiCard, chooseAiTrump } from "./ai";
 import { LOCAL_ROOM_JOIN_TIMEOUT_MS, roomDetailsToQrData, stateForViewer, type RoomConnectionDetails } from "./local-room-utils";
+import { canStartFlexibleRoom, createFlexibleLobby, LOCAL_ROOM_SEATS, partnerSeat, toNetworkPlayerConfig, virtualMember } from "./local-room-plan";
 import {
   LOCAL_ROOM_PORT,
   discoverLocalRooms,
@@ -15,19 +17,15 @@ import {
   type DiscoveredLocalRoom,
   type LocalRoomSocketMessage,
 } from "./local-room-transport";
-import type { MatchState, Seat, Suit } from "./types";
+import type { AiPersonaId, LocalRoomMember, MatchState, Seat, Suit } from "./types";
 
-const SEATS: Seat[] = [0, 1, 2, 3];
+const SEATS = LOCAL_ROOM_SEATS;
 const PROTOCOL_VERSION = 1;
 
 export type LocalRoomStatus = "idle" | "hosting" | "joining" | "ready" | "playing" | "error";
 export type LocalRoomRole = "host" | "client" | null;
 
-export interface RoomMember {
-  seat: Seat;
-  name: string;
-  connected: boolean;
-}
+export type RoomMember = LocalRoomMember;
 
 interface LocalRoomContextValue {
   status: LocalRoomStatus;
@@ -42,6 +40,7 @@ interface LocalRoomContextValue {
   createRoom: (name: string) => Promise<void>;
   joinRoom: (details: RoomConnectionDetails, name: string) => Promise<void>;
   startRoomMatch: () => void;
+  setVirtualPersona: (seat: Seat, personaId: AiPersonaId) => void;
   leaveRoom: () => Promise<void>;
   discoverRooms: () => void;
   stopDiscovering: () => void;
@@ -116,15 +115,25 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
     if (message.intent === "card" && typeof message.cardId === "string") {
       game.playNetworkCard(seat, message.cardId);
     }
-  }, [game]);
+    if (message.intent === "virtualPersona" && typeof message.personaId === "string" && ["layaan", "faris", "samar", "rania", "nader"].includes(message.personaId)) {
+      const virtualSeat = partnerSeat(seat);
+      const selected = membersRef.current.find((member) => member.seat === virtualSeat);
+      if (!selected?.isVirtual || game.state.phase !== "home") return;
+      setMemberList(membersRef.current.map((member) => member.seat === virtualSeat ? virtualMember(virtualSeat, message.personaId as AiPersonaId) : member));
+      broadcastLobby();
+    }
+  }, [broadcastLobby, game, setMemberList]);
 
   const updateHostMembersForDisconnect = useCallback((socket: Socket) => {
     const seat = sessionsRef.current.get(socket);
     sessionsRef.current.delete(socket);
     if (seat === undefined) return;
-    setMemberList(membersRef.current.map((member) => member.seat === seat ? { ...member, connected: false } : member));
+    setMemberList(membersRef.current.map((member) => {
+      if (member.seat !== seat) return member;
+      return game.state.phase === "home" ? virtualMember(seat, member.personaId) : { ...member, connected: false };
+    }));
     broadcastLobby();
-  }, [broadcastLobby, setMemberList]);
+  }, [broadcastLobby, game.state.phase, setMemberList]);
 
   const createRoom = useCallback(async (name: string) => {
     const hostName = name.trim() || "صاحب الغرفة";
@@ -145,7 +154,7 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
       setRoomDetails(details);
       setRole("host");
       setLocalSeat(0);
-      setMemberList([{ seat: 0, name: hostName, connected: true }]);
+      setMemberList(createFlexibleLobby(hostName));
       const host = new LocalRoomHost({
         onConnect: () => undefined,
         onClose: updateHostMembersForDisconnect,
@@ -161,7 +170,7 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
               return;
             }
             const existingSeat = sessionsRef.current.get(socket);
-            const availableSeat = SEATS.find((seat) => seat !== 0 && !membersRef.current.some((member) => member.seat === seat && member.connected));
+            const availableSeat = SEATS.find((seat) => seat !== 0 && membersRef.current.some((member) => member.seat === seat && member.isVirtual));
             const seat = existingSeat ?? availableSeat;
             if (seat === undefined || game.state.phase !== "home") {
               host.send(socket, { type: "error", message: game.state.phase === "home" ? "الغرفة مكتملة." : "بدأت المباراة بالفعل." });
@@ -169,8 +178,7 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
               return;
             }
             sessionsRef.current.set(socket, seat);
-            const remaining = membersRef.current.filter((member) => member.seat !== seat);
-            setMemberList([...remaining, { seat, name: nameValue, connected: true }]);
+            setMemberList(membersRef.current.map((member) => member.seat === seat ? { seat, name: nameValue, connected: true, isVirtual: false } : member));
             host.send(socket, { type: "welcome", seat, roomId: detailsNow.roomId });
             broadcastLobby();
             return;
@@ -245,7 +253,7 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
           if (message.type === "lobby" && Array.isArray(message.members)) {
             const parsedMembers = message.members.filter(isRoomMember);
             setMemberList(parsedMembers);
-            if (parsedMembers.length === 4 && parsedMembers.every((member) => member.connected)) setStatus("ready");
+            if (canStartFlexibleRoom(parsedMembers)) setStatus("ready");
             return;
           }
           if (message.type === "state" && isMatchState(message.state)) {
@@ -288,18 +296,73 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
     broadcastGameState();
   }, [broadcastGameState]);
 
-  const startRoomMatch = useCallback(() => {
-    if (role !== "host") return;
-    const readyMembers = membersRef.current.filter((member) => member.connected);
-    if (readyMembers.length !== 4) {
-      setError("انتظر انضمام أربعة لاعبين قبل بدء المباراة.");
+  const sendIntent = useCallback((message: LocalRoomSocketMessage) => {
+    try {
+      clientRef.current?.send(message);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "تعذر إرسال الأمر إلى المضيف.");
+    }
+  }, []);
+
+  const setVirtualPersona = useCallback((seat: Seat, personaId: AiPersonaId) => {
+    if (game.state.phase !== "home") return;
+    if (role === "host") {
+      const selected = membersRef.current.find((member) => member.seat === seat);
+      if (!selected?.isVirtual) return;
+      setMemberList(membersRef.current.map((member) => member.seat === seat ? virtualMember(seat, personaId) : member));
+      broadcastLobby();
       return;
     }
-    const names = readyMembers.reduce<Record<Seat, string>>((next, member) => {
-      next[member.seat] = member.name;
-      return next;
-    }, {} as Record<Seat, string>);
-    game.startNetworkMatch(names);
+    if (role === "client" && seat === partnerSeat(localSeat)) {
+      sendIntent({ type: "intent", intent: "virtualPersona", personaId });
+    }
+  }, [broadcastLobby, game.state.phase, localSeat, role, sendIntent, setMemberList]);
+
+  const virtualTurn = useMemo(() => {
+    if (role !== "host" || game.state.matchMode !== "localRoom" || game.state.phase === "home") return null;
+    const players = game.state.players;
+    if (game.state.phase === "bidding") {
+      const seat = game.state.bidding.currentPlayer;
+      return players[seat] && !players[seat].isHuman ? { kind: "bid" as const, seat } : null;
+    }
+    if (game.state.phase === "trump" && game.state.bidding.highestBidder !== null) {
+      const seat = game.state.bidding.highestBidder;
+      return players[seat] && !players[seat].isHuman ? { kind: "trump" as const, seat } : null;
+    }
+    if (game.state.phase === "playing") {
+      const lastPlayer = game.state.trick.plays.at(-1)?.playerId;
+      const seat = lastPlayer === undefined ? game.state.trick.leaderId : ((lastPlayer + 1) % 4) as Seat;
+      return players[seat] && !players[seat].isHuman ? { kind: "card" as const, seat } : null;
+    }
+    return null;
+  }, [game.state, role]);
+
+  useEffect(() => {
+    if (!virtualTurn) return;
+    const delay = (virtualTurn.kind === "card" ? 650 : 820) * (game.settings.animationSpeed === "هادئة" ? 1.24 : game.settings.animationSpeed === "سريعة" ? 0.74 : 1);
+    const timeout = setTimeout(() => {
+      const player = game.state.players[virtualTurn.seat];
+      if (virtualTurn.kind === "bid") {
+        game.submitNetworkBid(virtualTurn.seat, chooseAiBid(player.hand, game.state.bidding.highestBid, game.settings.aiLevel, game.settings.aiStyle, player.personaId));
+        return;
+      }
+      if (virtualTurn.kind === "trump") {
+        game.selectNetworkTrump(virtualTurn.seat, chooseAiTrump(player.hand, game.settings.aiLevel, game.settings.aiStyle, player.personaId));
+        return;
+      }
+      const card = chooseAiCard(game.state, virtualTurn.seat as 1 | 2 | 3, game.settings.aiLevel, game.settings.aiStyle, player.personaId);
+      game.playNetworkCard(virtualTurn.seat, card.id);
+    }, delay);
+    return () => clearTimeout(timeout);
+  }, [game, virtualTurn]);
+
+  const startRoomMatch = useCallback(() => {
+    if (role !== "host") return;
+    if (!canStartFlexibleRoom(membersRef.current)) {
+      setError("يلزم اتصال لاعبين بشريين على الأقل قبل بدء المباراة.");
+      return;
+    }
+    game.startNetworkMatch(toNetworkPlayerConfig(membersRef.current));
   }, [game, role]);
 
   const leaveRoom = useCallback(async () => {
@@ -335,14 +398,6 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
   const stopDiscovering = useCallback(() => {
     stopDiscoveringRef.current?.();
     stopDiscoveringRef.current = null;
-  }, []);
-
-  const sendIntent = useCallback((message: LocalRoomSocketMessage) => {
-    try {
-      clientRef.current?.send(message);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "تعذر إرسال الأمر إلى المضيف.");
-    }
   }, []);
 
   const requestBid = useCallback((bid: number | null) => {
@@ -389,6 +444,7 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
     createRoom,
     joinRoom,
     startRoomMatch,
+    setVirtualPersona,
     leaveRoom,
     discoverRooms,
     stopDiscovering,
@@ -397,7 +453,7 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
     requestCard,
     requestNextTrick,
     requestNextRound,
-  }), [createRoom, discoverRooms, discoveredRooms, error, nativeSupported, joinRoom, leaveRoom, localSeat, members, requestBid, requestCard, requestNextRound, requestNextTrick, requestTrump, role, roomDetails, startRoomMatch, status, stopDiscovering]);
+  }), [createRoom, discoverRooms, discoveredRooms, error, nativeSupported, joinRoom, leaveRoom, localSeat, members, requestBid, requestCard, requestNextRound, requestNextTrick, requestTrump, role, roomDetails, setVirtualPersona, startRoomMatch, status, stopDiscovering]);
 
   return <LocalRoomContext.Provider value={value}>{children}</LocalRoomContext.Provider>;
 }
@@ -405,7 +461,7 @@ export function LocalRoomProvider({ children }: { children: React.ReactNode }) {
 function isRoomMember(value: unknown): value is RoomMember {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Record<string, unknown>;
-  return typeof candidate.name === "string" && typeof candidate.connected === "boolean" && typeof candidate.seat === "number" && SEATS.includes(candidate.seat as Seat);
+  return typeof candidate.name === "string" && typeof candidate.connected === "boolean" && typeof candidate.isVirtual === "boolean" && typeof candidate.seat === "number" && SEATS.includes(candidate.seat as Seat);
 }
 
 function isMatchState(value: unknown): value is MatchState {

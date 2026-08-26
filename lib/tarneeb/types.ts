@@ -43,6 +43,22 @@ export interface Player {
   personaId?: AiPersonaId;
 }
 
+/** توصيف المقعد الذي يبنيه مضيف الغرفة قبل بدء مباراة شبكة مختلطة. */
+export interface NetworkPlayerConfig {
+  name: string;
+  isHuman: boolean;
+  personaId?: AiPersonaId;
+}
+
+/** عضو بهو الغرفة: بشري متصل أو مقعد افتراضي يملؤه الذكاء الاصطناعي عند البدء. */
+export interface LocalRoomMember {
+  seat: Seat;
+  name: string;
+  connected: boolean;
+  isVirtual: boolean;
+  personaId?: AiPersonaId;
+}
+
 export interface Play {
   playerId: Seat;
   card: Card;

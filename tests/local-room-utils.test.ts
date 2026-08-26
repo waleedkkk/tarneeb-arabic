@@ -4,7 +4,12 @@ import { describe, expect, it } from "vitest";
 
 describe("الغرفة المحلية", () => {
   it("يعيد ترتيب الطاولة للاعب المنضم دون كشف أوراق بقية اللاعبين", () => {
-    const source = createNetworkRound(createHomeState(), { 0: "أحمد", 1: "سارة", 2: "ليان", 3: "رامي" }, true);
+    const source = createNetworkRound(createHomeState(), {
+      0: { name: "أحمد", isHuman: true },
+      1: { name: "سارة", isHuman: true },
+      2: { name: "ليان", isHuman: true },
+      3: { name: "رامي", isHuman: true },
+    }, true);
     source.scores = { 0: 19, 1: 8 };
 
     const viewer = stateForViewer(source, 3);

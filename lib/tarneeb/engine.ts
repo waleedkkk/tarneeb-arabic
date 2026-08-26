@@ -3,6 +3,7 @@ import type {
   Card,
   GameSettings,
   MatchState,
+  NetworkPlayerConfig,
   Player,
   Rank,
   ResolvedTrick,
@@ -153,15 +154,16 @@ export function createRound(previous: MatchState, resetScores = false, personas 
 }
 
 /** ينشئ جولة شبكة محلية مع الإبقاء على توزيع وحسم القواعد داخل المحرك نفسه. */
-export function createNetworkRound(previous: MatchState, playerNames: Record<Seat, string>, resetScores = false): MatchState {
+export function createNetworkRound(previous: MatchState, playerConfig: Record<Seat, NetworkPlayerConfig>, resetScores = false): MatchState {
   const round = createRound(previous, resetScores);
   return {
     ...round,
     matchMode: "localRoom",
     players: round.players.map((player) => ({
       ...player,
-      name: playerNames[player.id],
-      isHuman: true,
+      name: playerConfig[player.id].name,
+      isHuman: playerConfig[player.id].isHuman,
+      personaId: playerConfig[player.id].personaId,
     })),
   };
 }
