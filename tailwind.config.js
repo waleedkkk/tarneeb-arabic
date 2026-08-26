@@ -1,33 +1,23 @@
-const { themeColors } = require("./theme.config");
-const plugin = require("tailwindcss/plugin");
-
-const tailwindColors = Object.fromEntries(
-  Object.entries(themeColors).map(([name, swatch]) => [
-    name,
-    {
-      DEFAULT: `var(--color-${name})`,
-      light: swatch.light,
-      dark: swatch.dark,
-    },
-  ]),
-);
-
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: "class",
-  // Scan all component and app files for Tailwind classes
-  content: ["./app/**/*.{js,ts,tsx}", "./components/**/*.{js,ts,tsx}", "./lib/**/*.{js,ts,tsx}", "./hooks/**/*.{js,ts,tsx}"],
-
+  content: ["./app/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"],
   presets: [require("nativewind/preset")],
   theme: {
-    extend: {
-      colors: tailwindColors,
-    },
+    extend: {},
   },
-  plugins: [
-    plugin(({ addVariant }) => {
-      addVariant("light", ':root:not([data-theme="dark"]) &');
-      addVariant("dark", ':root[data-theme="dark"] &');
-    }),
+  plugins: [],
+  // 🛡️ الحل السحري: أجبر الاحتفاظ بكل الأرقام والألوان المستخدمة في المزايدة
+  safelist: [
+    // أرقام المزايدة (عادة من 1 إلى 13، أو حسب لعبتكم)
+    { pattern: /text-(2|3|4|5|6|7|8|9|10|11|12|13)xl/ },
+    { pattern: /text-(2|3|4|5|6|7|8|9|10|11|12|13)xl/ },
+    // ألوان الأزرار والخلفيات التي قد تظهر ديناميكياً
+    { pattern: /bg-(red|blue|green|yellow|gray|indigo|purple|pink)-(100|200|300|400|500|600|700|800|900)/ },
+    { pattern: /text-(red|blue|green|yellow|gray|indigo|purple|pink)-(100|200|300|400|500|600|700|800|900)/ },
+    // أحجام وأبعاد البطاقات والأزرار
+    { pattern: /w-(4|5|6|8|10|12|14|16|20|24|28|32)/ },
+    { pattern: /h-(4|5|6|8|10|12|14|16|20|24|28|32)/ },
+    // هوامش وحواف
+    "rounded-xl", "rounded-full", "shadow-lg", "border-2",
   ],
 };
