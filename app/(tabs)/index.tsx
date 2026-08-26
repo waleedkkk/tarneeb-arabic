@@ -5,7 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { useGame } from "@/lib/tarneeb/game-context";
 import { useLocalRoom } from "@/lib/tarneeb/local-room-context";
 import { getTabScreenBottomPadding, TAB_SCREEN_SAFE_EDGES } from "@/lib/tarneeb/native-screen-layout";
-import { cardLabel, legalCards, suitName, suitStrength, suitSymbol } from "@/lib/tarneeb/engine";
+import { cardLabel, hasCompletePlayerSeats, legalCards, suitName, suitStrength, suitSymbol } from "@/lib/tarneeb/engine";
 import type { MatchState, Suit } from "@/lib/tarneeb/types";
 import { GameTable, LastTrickBanner } from "@/components/tarneeb/table";
 import { CurvedCardHand } from "@/components/tarneeb/card-fan";
@@ -19,16 +19,24 @@ export default function GameScreen() {
   const { state } = game;
   const [roomSheetVisible, setRoomSheetVisible] = useState(false);
   const isNetworkMatch = state.matchMode === "localRoom";
+  const hasPlayableSeats = state.phase === "home" || hasCompletePlayerSeats(state);
   const tableAction = useMemo(() => <View style={styles.tableActionRow}><MatchLogButton compact /><MatchActions /></View>, []);
   const handleCardPress = useCallback((cardId: string) => {
-    const card = state.players[0].hand.find((item) => item.id === cardId);
-    if (card && legalCards(state.players[0].hand, state.trick).some((item) => item.id === card.id)) {
+    const localPlayer = state.players[0];
+    if (!localPlayer || !Array.isArray(localPlayer.hand)) return;
+    const card = localPlayer.hand.find((item) => item.id === cardId);
+    if (card && legalCards(localPlayer.hand, state.trick).some((item) => item.id === card.id)) {
       if (isNetworkMatch) room.requestCard(card.id);
       else game.playHumanCard(card);
     }
   }, [game, isNetworkMatch, room, state]);
 
+  useEffect(() => {
+    if (!hasPlayableSeats) game.exitMatch();
+  }, [game, hasPlayableSeats]);
+
   if (isNetworkMatch && room.status === "error") return <ConnectionLostScreen message={room.error ?? "تعذر متابعة الغرفة المحلية."} onReturn={() => { void room.leaveRoom(); game.exitMatch(); }} />;
+  if (!hasPlayableSeats) return <StateRecoveryScreen />;
   if (state.phase === "home") return <><Home onStart={game.startMatch} onLocal={() => setRoomSheetVisible(true)} /><LocalRoomSheet visible={roomSheetVisible} onClose={() => setRoomSheetVisible(false)} /></>;
   if (state.phase === "bidding") return <Bidding />;
   if (state.phase === "trump") return <TrumpSelection />;
@@ -40,6 +48,10 @@ export default function GameScreen() {
       {state.phase === "trickResult" && <TrickResultOverlay state={state} onNext={isNetworkMatch ? room.requestNextTrick : game.nextTrick} canAdvance={!isNetworkMatch || room.role === "host"} />}
     </SafeAreaView>
   );
+}
+
+function StateRecoveryScreen() {
+  return <SafeAreaView edges={TAB_SCREEN_SAFE_EDGES} style={[styles.safe, styles.recoveryScreen]}><Text style={styles.recoveryText}>نعيد تجهيز المباراة…</Text></SafeAreaView>;
 }
 
 function TrickResultOverlay({ state, onNext, canAdvance }: { state: MatchState; onNext: () => void; canAdvance: boolean }) {
@@ -258,6 +270,8 @@ function SuitStrengthCard({ suit, count, highCount, bars, label }: ReturnType<ty
 }
 
 const styles = StyleSheet.create({
+  recoveryScreen: { alignItems: "center", justifyContent: "center" },
+  recoveryText: { color: "#FFF8E7", fontSize: 17, fontWeight: "700", writingDirection: "rtl" },
   safe: { flex: 1, backgroundColor: "#0E3B2E", direction: "ltr" },
   homeSafe: { flex: 1, backgroundColor: "#0E3B2E", overflow: "hidden", direction: "ltr" },
   homeContent: { flex: 1, paddingHorizontal: 24, paddingTop: 30, paddingBottom: 18, alignItems: "center" },

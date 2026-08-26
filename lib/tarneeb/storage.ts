@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { GameSettings, MatchState, RoundRecord } from "./types";
 import { AI_PERSONAS, DEFAULT_OPPONENT_PERSONAS } from "./personas";
+import { hasCompletePlayerSeats } from "./engine";
 
 const MATCH_KEY = "tarneeb.match.v1";
 const SETTINGS_KEY = "tarneeb.settings.v1";
@@ -14,6 +15,10 @@ export async function loadStoredMatch(): Promise<MatchState | null> {
     if (!parsed || typeof parsed.phase !== "string" || !Array.isArray(parsed.players)) return null;
     // لا يمكن استئناف غرفة شبكة بعد إغلاق التطبيق، لأن المضيف والاتصال لا يعودان صالحين.
     if (parsed.matchMode === "localRoom") return null;
+    if (parsed.phase !== "home" && !hasCompletePlayerSeats(parsed)) {
+      await AsyncStorage.removeItem(MATCH_KEY);
+      return null;
+    }
     const players = parsed.players.map((player) => ({
       ...player,
       handCount: typeof player.handCount === "number" ? player.handCount : player.hand.length,

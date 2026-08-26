@@ -20,6 +20,14 @@ const SEATS: Seat[] = [0, 1, 2, 3];
 const SUIT_ORDER: Record<Suit, number> = { clubs: 0, diamonds: 1, hearts: 2, spades: 3 };
 const HIGH_CARD_WEIGHTS: Partial<Record<Rank, number>> = { 10: 1, 11: 2, 12: 3, 13: 4, 14: 5 };
 
+/** يتحقق من أن الحالة القابلة للعب تملك المقاعد الأربعة وأيديها قبل عرض الطاولة. */
+export function hasCompletePlayerSeats(state: Pick<MatchState, "players">): boolean {
+  return SEATS.every((seat) => {
+    const player = state.players?.[seat];
+    return player?.id === seat && Array.isArray(player.hand);
+  });
+}
+
 export const DEFAULT_SETTINGS: GameSettings = {
   targetScore: 31,
   aiLevel: "متوازن",
